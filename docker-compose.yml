@@ -1,0 +1,20 @@
+version: '3'
+services:
+    jsChaintalkBoot:                       # Service Name
+        container_name: js-chaintalk-boot
+        hostname: js-chaintalk-boot
+        build:
+            context: .
+        image: js-chaintalk-boot.node:latest
+        ports:
+            # 指定端口映射，类似 docker run 的 -p 选项，注意使用字符串形式
+            # [local port]:[container port]
+            - "10000:10000"
+            - "10010:10010"
+        #volumes:
+            #- ./deploy/etc/localtime:/etc/localtime:ro
+            #- ./deploy/etc/timezone:/etc/timezone:ro
+            #- ./deploy/etc/hosts:/etc/hosts:ro
+        #environment:
+            #- spring.profiles.active=prod
+            #- UPSTREAM_HOST=gateway.docker.internal

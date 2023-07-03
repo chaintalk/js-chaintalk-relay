@@ -1,0 +1,60 @@
+{
+	"name": "js-chaintalk-boot",
+	"version": "1.0.0",
+	"description": "A out of the box libp2p relay server with HOP",
+	"leadMaintainer": "Chain Talk, Team.",
+	"main": "src/bin.js",
+	"bin": {
+		"js-chaintalk-boot": "src/bin.js"
+	},
+	"scripts": {
+		"dev": "node src/bin.js",
+		"start": "node dist/bin.js"
+	},
+	"files": [
+		"src",
+		"dist"
+	],
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/chaintalk/js-chaintalk-boot.git"
+	},
+	"keywords": [
+		"libp2p",
+		"relay",
+		"auto relay",
+		"hop"
+	],
+	"author": "Chain Talk, Team.",
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/chaintalk/js-chaintalk-boot/issues"
+	},
+	"homepage": "https://github.com/chaintalk/js-chaintalk-boot#readme",
+	"dependencies": {
+		"debug": "^4.3.4",
+		"libp2p": "^0.32.3",
+		"libp2p-gossipsub": "^0.11.0",
+		"libp2p-mplex": "^0.10.4",
+		"libp2p-noise": "^4.0.0",
+		"libp2p-pubsub-peer-discovery": "^4.0.0",
+		"libp2p-tcp": "^0.17.1",
+		"libp2p-websockets": "^0.16.1",
+		"menoetius": "^0.0.2",
+		"minimist": "^1.2.5",
+		"multiformats": "^12.0.1",
+		"peer-id": "^0.16.0"
+	},
+	"devDependencies": {
+		"@types/node": "^20.3.3",
+		"@types/readable-stream": "^2.3.15",
+		"aegir": "^35.0.1",
+		"ts-jest": "^29.1.0",
+		"ts-loader": "^9.4.2",
+		"ts-node": "^10.9.1",
+		"typescript": "^5.1.6"
+	},
+	"contributors": [
+		"Qixing Liu <liuqixing@dekuan.org>"
+	]
+}

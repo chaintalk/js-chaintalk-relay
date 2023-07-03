@@ -1,3 +1,9 @@
+.DS_Store
+/.idea
+/dist
+/storage/peerIdData.json
+
+
 # Logs
 logs
 *.log
