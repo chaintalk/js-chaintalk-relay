@@ -5,11 +5,12 @@ const log = debug( 'libp2p:relay:bin' )
 
 const path = require( 'path' )
 const fs = require( 'fs' )
+
 const PeerId = require( 'peer-id' )
 
 const CommonUtil = require( './utils/CommonUtil' );
-const Storage = require( './utils/Storage' );
 const RelayNode = require( './RelayNode' );
+const SwarmKeyStorage = require( './utils/SwarmKeyStorage' );
 const minimist = require( 'minimist' );
 
 const argv = minimist( process.argv.slice( 2 ) );
@@ -38,7 +39,7 @@ async function main()
 		argv.disablePubsubDiscovery || process.env.DISABLE_PUBSUB_DISCOVERY
 	)
 
-	//	PeerId
+	//	PeerId	- string
 	let peerId
 	if ( argv.peerId || process.env.PEER_ID )
 	{
@@ -52,18 +53,29 @@ async function main()
 		peerId = await RelayNode.recoverPeerId();
 		if ( ! peerId )
 		{
+			//	peerId
+			//	{
+			//		_id : Uint8Array(34) { 0 : 18, 1: 32. 2: 140, 3: 99, ... }
+			//		_idB58String : "QmXng7pcVBkUuBLM5dWfxaemVxgG8jce81MXQVkzadbFCL"
+			//		_privKey : RsaPrivateKey { ... }
+			//		_pubKey : RsaPublicKey { ... }
+			//	}
 			peerId = await PeerId.create()
 			log( 'You are using an automatically generated peer.' )
 			log( 'If you want to keep the same address for the server you should provide a peerId with --peerId <jsonFilePath>' )
 
 			//	save peerId(json format) data
-			await Storage.savePeerIdData( peerId );
+			await RelayNode.savePeerId( peerId );
 		}
 	}
+
+	//	swarm key
+	const swarmKey = await SwarmKeyStorage.loadSwarmKey();
 
 	//	Create Relay
 	const relay = await RelayNode.create( {
 		peerId,
+		swarmKey,
 		listenAddresses,
 		announceAddresses,
 		pubsubDiscoveryEnabled
