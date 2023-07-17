@@ -1,4 +1,4 @@
-class TypeUtil
+export default class TypeUtil
 {
 	static isObject( data )
 	{
@@ -19,6 +19,11 @@ class TypeUtil
 		return null !== data;
 	}
 
+	/**
+	 *	@param data	{any}
+	 *	@param keys	{Array}
+	 *	@returns {boolean}
+	 */
 	static isNotNullObjectWithKeys( data, keys )
 	{
 		if ( ! this.isNotNullObject( data ) )
@@ -116,6 +121,3 @@ class TypeUtil
 		return 0;
 	}
 }
-
-
-module.exports = TypeUtil;

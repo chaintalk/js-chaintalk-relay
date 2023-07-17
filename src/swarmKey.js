@@ -1,10 +1,5 @@
-const Libp2p = require( 'libp2p' );
-const path = require( "path" );
-const fs = require( 'fs' );
-const uint8ArrayFromString = require( 'uint8arrays/from-string' )
-const uint8ArrayToString = require( 'uint8arrays/to-string' )
-const Storage = require( './utils/Storage' );
-const SwarmKeyStorage = require( './utils/SwarmKeyStorage' );
+import { fromString as uint8ArrayFromString, toString as uint8ArrayToString } from 'uint8arrays'
+import SwarmKeyStorage from './utils/SwarmKeyStorage.js';
 
 
 async function swarmKeyFunc()
@@ -18,7 +13,7 @@ async function swarmKeyFunc()
 	//
 	setTimeout( async () =>
 	{
-		const swarmKeyString = uint8ArrayToString.toString( swarmKey );
+		const swarmKeyString = SwarmKeyStorage.swarmKeyToString( swarmKey );
 		console.log( `swarmKey in file ${ SwarmKeyStorage.getSwarmKeyFilename() }:` )
 		console.log( `------------------------------------------------------------` )
 		console.log( swarmKeyString );

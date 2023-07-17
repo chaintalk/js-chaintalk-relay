@@ -25,7 +25,8 @@
 		"libp2p",
 		"relay",
 		"auto relay",
-		"hop"
+		"hop",
+		"bootstrap"
 	],
 	"author": "Chain Talk, Team.",
 	"license": "MIT",
@@ -34,19 +35,21 @@
 	},
 	"homepage": "https://github.com/chaintalk/js-chaintalk-boot#readme",
 	"dependencies": {
+		"@chainsafe/libp2p-noise": "^12.0.1",
+		"@chainsafe/libp2p-yamux": "^4.0.2",
+		"@libp2p/interface-peer-id": "^2.0.2",
+		"@libp2p/mplex": "^8.0.4",
+		"@libp2p/peer-id": "^2.0.4",
+		"@libp2p/peer-id-factory": "^2.0.4",
+		"@libp2p/pubsub-peer-discovery": "^8.0.4",
+		"@libp2p/tcp": "^7.0.3",
+		"@libp2p/websockets": "^6.0.3",
 		"debug": "^4.3.4",
 		"libp2p": "^0.45.9",
-		"libp2p-gossipsub": "^0.13.0",
-		"libp2p-mplex": "^0.10.7",
-		"libp2p-noise": "^4.0.0",
-		"libp2p-pnet": "^0.1.0",
-		"libp2p-pubsub-peer-discovery": "^4.0.0",
-		"libp2p-tcp": "^0.17.2",
-		"libp2p-websockets": "^0.16.2",
 		"menoetius": "^0.0.3",
 		"minimist": "^1.2.8",
 		"multiformats": "^12.0.1",
-		"peer-id": "^0.16.0"
+		"uint8arrays": "^4.0.4"
 	},
 	"devDependencies": {
 		"@types/node": "^20.3.3",

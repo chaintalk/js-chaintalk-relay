@@ -1,16 +1,29 @@
-const fs = require( 'fs' );
-const pnet = require( 'libp2p-pnet' );
+import fs from 'fs';
+import { generateKey } from 'libp2p/pnet';
+import { toString as uint8ArrayToString } from "uint8arrays";
 
-const Storage = require( './Storage' );
-const LogUtil = require( "./LogUtil" );
-const TypeUtil = require( "./TypeUtil" );
+import Storage from './Storage.js';
+import LogUtil from "./LogUtil.js";
 
 
-class SwarmKeyStorage
+export default class SwarmKeyStorage
 {
 	static getSwarmKeyFilename()
 	{
 		return `${ Storage.getRootDirectory() }/.swarmKey`;
+	}
+
+	static swarmKeyToString( swarmKey )
+	{
+		try
+		{
+			return uint8ArrayToString( swarmKey );
+		}
+		catch ( err )
+		{
+			console.error( err );
+		}
+		return null;
 	}
 
 	static async generateSwarmKey()
@@ -28,7 +41,7 @@ class SwarmKeyStorage
 			flag : "w",
 			mode : 0o666
 		} );
-		pnet.generate( writer );
+		generateKey( writer );
 		writer.close();
 
 		//	load and return
@@ -74,5 +87,3 @@ class SwarmKeyStorage
 		} );
 	}
 }
-
-module.exports = SwarmKeyStorage;

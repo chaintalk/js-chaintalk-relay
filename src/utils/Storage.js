@@ -1,16 +1,28 @@
-const path = require( "path" );
-const fs = require( 'fs' );
-const LogUtil = require( "./LogUtil" );
-const TypeUtil = require( "./TypeUtil" );
+import { fileURLToPath } from 'url';
+import { dirname, resolve } from 'path';
+
+/**
+ * 	define constants
+ */
+const __filename = fileURLToPath( import.meta.url );
+const __dirname = dirname( __filename );
 
 
-class Storage
+export default class Storage
 {
+	static get __filename()
+	{
+		return __filename;
+	}
+
+	static get __dirname()
+	{
+		return __dirname;
+	}
+
 	static getRootDirectory()
 	{
-		const parentDir = path.resolve( __dirname, ".." );
-		return path.resolve( parentDir, ".." );
+		const parentDir = resolve( __dirname, ".." );
+		return resolve( parentDir, ".." );
 	}
 }
-
-module.exports = Storage;

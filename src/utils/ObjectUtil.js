@@ -1,6 +1,6 @@
-const TypeUtil = require( "./TypeUtil" );
+import TypeUtil from "./TypeUtil";
 
-class ObjectUtil
+export default class ObjectUtil
 {
 	static deepGet( object, keyChain )
 	{
@@ -44,6 +44,3 @@ class ObjectUtil
 		return res;
 	}
 }
-
-
-module.exports = ObjectUtil;

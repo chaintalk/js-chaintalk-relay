@@ -1,4 +1,4 @@
-class CommonUtil
+export default class CommonUtil
 {
 	static getExtraParams( alias1, alias2 )
 	{
@@ -38,7 +38,8 @@ class CommonUtil
 
 	static getListenAddresses( argv )
 	{
-		let listenAddresses = [ '/ip4/127.0.0.1/tcp/10010/ws', '/ip4/127.0.0.1/tcp/10000' ]
+		//let listenAddresses = [ '/ip4/127.0.0.1/tcp/10010/ws', '/ip4/127.0.0.1/tcp/10000' ]
+		let listenAddresses = [ '/ip4/0.0.0.0/tcp/10000', '/ip4/0.0.0.0/tcp/10010/ws' ]
 		const argvAddr = argv.listenMultiaddrs || argv.lm
 
 		if ( argvAddr )
@@ -56,5 +57,3 @@ class CommonUtil
 		return listenAddresses
 	}
 }
-
-module.exports = CommonUtil;

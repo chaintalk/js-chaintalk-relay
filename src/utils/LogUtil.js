@@ -1,4 +1,4 @@
-class LogUtil
+export default class LogUtil
 {
 	static LEVEL_DEBUG	= 0;
 	static LEVEL_INFO	= 1;
@@ -36,6 +36,14 @@ class LogUtil
 		this.output( LogUtil.LEVEL_FATAL, args );
 	}
 
+	static broadcast( ...args )
+	{
+		for ( const arg of args )
+		{
+			console.log( `))) ${ arg }` );
+		}
+	}
+
 	static output( level, ...args )
 	{
 		if ( level >= LogUtil.logLevel )
@@ -64,5 +72,3 @@ class LogUtil
 		}
 	}
 }
-
-module.exports = LogUtil;

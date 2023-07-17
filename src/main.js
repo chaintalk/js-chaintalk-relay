@@ -1,17 +1,14 @@
 // Usage: $0 [--peerId <jsonFilePath>] [--listenMultiaddrs <ma> ... <ma>] [--announceMultiaddrs <ma> ... <ma>]
 //           [--metricsPort <port>] [--disableMetrics] [--disablePubsubDiscovery]
-const debug = require( 'debug' );
+import minimist from 'minimist';
+
+import debug from 'debug';
 const log = debug( 'libp2p:relay:bin' )
 
-const path = require( 'path' )
-const fs = require( 'fs' )
-
-const PeerId = require( 'peer-id' )
-
-const CommonUtil = require( './utils/CommonUtil' );
-const RelayNode = require( './RelayNode' );
-const SwarmKeyStorage = require( './utils/SwarmKeyStorage' );
-const minimist = require( 'minimist' );
+import CommonUtil from './utils/CommonUtil.js';
+import RelayNode from './providers/RelayNode.js';
+import SwarmKeyStorage from './utils/SwarmKeyStorage.js';
+import LogUtil from "./utils/LogUtil.js";
 
 const argv = minimist( process.argv.slice( 2 ) );
 
@@ -31,50 +28,42 @@ async function main()
 	const listenAddresses = CommonUtil.getListenAddresses( argv )
 	const announceAddresses = CommonUtil.getAnnounceAddresses( argv )
 
-	log( `listenAddresses: ${ listenAddresses.map( ( a ) => a ) }` )
-	announceAddresses.length && log( `announceAddresses: ${ announceAddresses.map( ( a ) => a ) }` )
+	LogUtil.broadcast( `listenAddresses: ${ listenAddresses.map( ( a ) => a ) }` )
+	announceAddresses.length && LogUtil.broadcast( `announceAddresses: ${ announceAddresses.map( ( a ) => a ) }` )
 
 	//	Discovery
-	const pubsubDiscoveryEnabled = !(
+	const pubsubDiscoveryEnabled = ! (
 		argv.disablePubsubDiscovery || process.env.DISABLE_PUBSUB_DISCOVERY
 	)
 
-	//	PeerId	- string
-	let peerId
-	if ( argv.peerId || process.env.PEER_ID )
+	//	argv.peerId is the full filename of the file where the peerId object is stored
+	const peerIdFilename = argv.peerId || process.env.PEER_ID || undefined;
+	let basePeerIdObject = await RelayNode.recoverPeerId( peerIdFilename );
+	if ( basePeerIdObject )
 	{
-		//	argv.peerId is the full filename of
-		const peerIdFilename = argv.peerId || process.env.PEER_ID;
-		peerId = await RelayNode.recoverPeerId( peerIdFilename );
-		log( 'PeerId provided was loaded.' )
+		LogUtil.broadcast( 'PeerId provided was loaded.' );
 	}
 	else
 	{
-		peerId = await RelayNode.recoverPeerId();
-		if ( ! peerId )
-		{
-			//	peerId
-			//	{
-			//		_id : Uint8Array(34) { 0 : 18, 1: 32. 2: 140, 3: 99, ... }
-			//		_idB58String : "QmXng7pcVBkUuBLM5dWfxaemVxgG8jce81MXQVkzadbFCL"
-			//		_privKey : RsaPrivateKey { ... }
-			//		_pubKey : RsaPublicKey { ... }
-			//	}
-			peerId = await PeerId.create()
-			log( 'You are using an automatically generated peer.' )
-			log( 'If you want to keep the same address for the server you should provide a peerId with --peerId <jsonFilePath>' )
-
-			//	save peerId(json format) data
-			await RelayNode.savePeerId( peerId );
-		}
+		//	peerId
+		//	{
+		//		_id : Uint8Array(34) { 0 : 18, 1: 32. 2: 140, 3: 99, ... }
+		//		_idB58String : "QmXng7pcVBkUuBLM5dWfxaemVxgG8jce81MXQVkzadbFCL"
+		//		_privKey : RsaPrivateKey { ... }
+		//		_pubKey : RsaPublicKey { ... }
+		//	}
+		basePeerIdObject = await RelayNode.createAndSavePeerId();
+		LogUtil.broadcast( 'You are using an automatically generated peer.' )
+		LogUtil.broadcast( `If you want to keep the same address for the server you should provide a peerId with --peerId <jsonFilePath>` )
 	}
 
 	//	swarm key
 	const swarmKey = await SwarmKeyStorage.loadSwarmKey();
+	LogUtil.broadcast( `swarm key:\n${ SwarmKeyStorage.swarmKeyToString( swarmKey ) }` );
 
 	//	Create Relay
 	const relay = await RelayNode.create( {
-		peerId,
+		peerId : basePeerIdObject,
 		swarmKey,
 		listenAddresses,
 		announceAddresses,
@@ -82,12 +71,15 @@ async function main()
 	} );
 
 	await relay.start()
-	console.log( 'Relay server listening on:' )
-	relay.multiaddrs.forEach( ( m ) => console.log( `${ m }/p2p/${ relay.peerId.toB58String() }` ) )
+	LogUtil.broadcast( 'Relay server listening on:' );
+	const multiaddrs = relay.getMultiaddrs();
+	multiaddrs.forEach( ( ma ) => {
+		LogUtil.broadcast( `${ ma.toString() }` );
+	} );
 
 	// if ( metrics )
 	// {
-	// 	log( 'enabling metrics' )
+	// 	LogUtil.info( 'enabling metrics' )
 	// 	metricsServer = http.createServer( ( req, res ) =>
 	// 	{
 	// 		if ( req.url !== '/metrics' )
@@ -101,13 +93,13 @@ async function main()
 	//
 	// 	metricsServer.listen( metricsPort, '0.0.0.0', () =>
 	// 	{
-	// 		console.log( `metrics server listening on ${ metricsPort }` )
+	// 		LogUtil.info( `metrics server listening on ${ metricsPort }` )
 	// 	} )
 	// }
 
 	const stop = async () =>
 	{
-		console.log( 'Stopping...' )
+		LogUtil.broadcast( 'Stopping...' )
 		await relay.stop()
 
 		//metricsServer && await metricsServer.close()
