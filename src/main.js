@@ -3,7 +3,7 @@
 import minimist from 'minimist';
 
 import debug from 'debug';
-const log = debug( 'libp2p:relay:bin' )
+//const log = debug( 'libp2p:relay:bin' )
 
 import CommonUtil from './utils/CommonUtil.js';
 import RelayNode from './providers/RelayNode.js';
@@ -71,7 +71,7 @@ async function main()
 	} );
 
 	await relay.start()
-	LogUtil.broadcast( 'Relay server listening on:' );
+	LogUtil.broadcast( 'Bootstrap Relay Server listening on:' );
 	const multiaddrs = relay.getMultiaddrs();
 	multiaddrs.forEach( ( ma ) => {
 		LogUtil.broadcast( `${ ma.toString() }` );
