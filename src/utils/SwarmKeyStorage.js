@@ -4,6 +4,7 @@ import { toString as uint8ArrayToString } from "uint8arrays";
 
 import Storage from './Storage.js';
 import LogUtil from "./LogUtil.js";
+import TypeUtil from "./TypeUtil.js";
 
 
 export default class SwarmKeyStorage
@@ -12,6 +13,44 @@ export default class SwarmKeyStorage
 	{
 		return `${ Storage.getRootDirectory() }/.swarmKey`;
 	}
+
+	static isValidSwarmKeyToObject( swarmKeyObject )
+	{
+		return TypeUtil.isNotNullObjectWithKeys( swarmKeyObject, [ 'protocol', 'encode', 'key' ] );
+	}
+
+	static swarmKeyToObject( swarmKey )
+	{
+		if ( swarmKey instanceof Uint8Array )
+		{
+			swarmKey = this.swarmKeyToString( swarmKey );
+		}
+		if ( ! TypeUtil.isNotEmptyString( swarmKey ) )
+		{
+			return null;
+		}
+
+		const lines = swarmKey.split( /\r?\n/ );
+		if ( ! Array.isArray( lines ) || lines.length < 3 )
+		{
+			return null;
+		}
+
+		const [ protocol, encode, key ] = lines;
+		if ( ! TypeUtil.isNotEmptyString( protocol ) ||
+		     ! TypeUtil.isNotEmptyString( encode ) ||
+		     ! TypeUtil.isNotEmptyString( key ) )
+		{
+			return null;
+		}
+
+		return {
+			protocol,
+			encode,
+			key
+		}
+	}
+
 
 	static swarmKeyToString( swarmKey )
 	{

@@ -1,9 +1,7 @@
 // Usage: $0 [--peerId <jsonFilePath>] [--listenMultiaddrs <ma> ... <ma>] [--announceMultiaddrs <ma> ... <ma>]
 //           [--metricsPort <port>] [--disableMetrics] [--disablePubsubDiscovery]
 import minimist from 'minimist';
-
-import debug from 'debug';
-//const log = debug( 'libp2p:relay:bin' )
+import chalk from 'chalk';
 
 import CommonUtil from './utils/CommonUtil.js';
 import RelayNode from './providers/RelayNode.js';
@@ -59,7 +57,13 @@ async function main()
 
 	//	swarm key
 	const swarmKey = await SwarmKeyStorage.loadSwarmKey();
-	LogUtil.broadcast( `swarm key:\n${ SwarmKeyStorage.swarmKeyToString( swarmKey ) }` );
+	const swarmKeyObject = SwarmKeyStorage.swarmKeyToObject( swarmKey );
+	if ( ! SwarmKeyStorage.isValidSwarmKeyToObject( swarmKeyObject ) )
+	{
+		LogUtil.broadcast( `invalid swarm key. Please first create a new swarm key with command <npm run swarm-key>` );
+		return;
+	}
+	LogUtil.broadcast( `swarm key: ${ chalk.bold( swarmKeyObject.key ) }` );
 
 	//	Create Relay
 	const relay = await RelayNode.create( {
@@ -112,4 +116,4 @@ async function main()
 }
 
 
-main().then( r => {} );
+main().then( () => {} );
