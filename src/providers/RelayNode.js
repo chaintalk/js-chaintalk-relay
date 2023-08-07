@@ -16,11 +16,15 @@ import { yamux } from '@chainsafe/libp2p-yamux'
 import { mplex } from '@libp2p/mplex'
 import { tcp } from '@libp2p/tcp';
 import { webSockets } from '@libp2p/websockets';
+import { bootstrap } from '@libp2p/bootstrap'
+import { floodsub } from '@libp2p/floodsub'
 import { pubsubPeerDiscovery } from '@libp2p/pubsub-peer-discovery'
-import { circuitRelayServer } from 'libp2p/circuit-relay'
+import { circuitRelayTransport, circuitRelayServer } from 'libp2p/circuit-relay'
 import { identifyService } from 'libp2p/identify'
 
 import PeerIdStorage from '../utils/PeerIdStorage.js';
+import { _bootstrappers } from "../../_bootstrappers.js";
+//import { RSAPeerId } from "@libp2p/interface-peer-id";
 
 
 export default class RelayNode
@@ -124,21 +128,31 @@ export default class RelayNode
 			},
 			transports : [
 				tcp(),
-				webSockets()
+				webSockets(),
+				circuitRelayTransport()
+			],
+			streamMuxers : [
+				yamux(), mplex()
 			],
 			connectionEncryption : [
 				noise()
 			],
+			peerDiscovery: [
+				bootstrap({
+					list: _bootstrappers
+				}),
+				pubsubPeerDiscovery({
+					interval: 1000
+				})
+			],
+			services : {
+				relay : circuitRelayServer(),
+				identify : identifyService(),
+				pubsub: floodsub(),
+			},
 			connectionManager: {
 				maxConnections: 1024,
 				minConnections: 2
-			},
-			streamMuxers : [
-				yamux(), mplex()
-			],
-			services : {
-				identify : identifyService(),
-				relay : circuitRelayServer()
 			}
 		};
 		if ( swarmKey )
@@ -151,13 +165,12 @@ export default class RelayNode
 		const node = await createLibp2p( options );
 		node.addEventListener( 'peer:connect', ( evt ) =>
 		{
-			const peerId = evt.detail
+			const peerId = evt.detail;
 			console.log( 'Connection established to:', peerId.toString() ) // Emitted when a peer has been found
 		} );
 		node.addEventListener( 'peer:discovery', ( evt ) =>
 		{
-			const peerInfo = evt.detail
-
+			const peerInfo = evt.detail;
 			console.log( 'Discovered:', peerInfo.id.toString() )
 		} );
 
@@ -171,6 +184,7 @@ export default class RelayNode
 	{
 		return await createRSAPeerId();
 	}
+
 	static async createAndSavePeerId()
 	{
 		const peerIdObject = await this.createPeerId();

@@ -14,7 +14,7 @@ export default class SwarmKeyStorage
 		return `${ Storage.getRootDirectory() }/.swarmKey`;
 	}
 
-	static isValidSwarmKeyToObject( swarmKeyObject )
+	static isValidSwarmObject( swarmKeyObject )
 	{
 		return TypeUtil.isNotNullObjectWithKeys( swarmKeyObject, [ 'protocol', 'encode', 'key' ] );
 	}
@@ -87,6 +87,22 @@ export default class SwarmKeyStorage
 		return await SwarmKeyStorage.loadSwarmKey();
 	}
 
+	static async loadSwarmObject( filename )
+	{
+		return new Promise( async ( resolve, reject ) =>
+		{
+			try
+			{
+				const swarmKey = await this.loadSwarmKey( filename );
+				const swarmObject = this.swarmKeyToObject( swarmKey );
+				resolve( swarmObject );
+			}
+			catch ( err )
+			{
+				reject( err );
+			}
+		} );
+	}
 	static async loadSwarmKey( filename )
 	{
 		return new Promise( ( resolve, reject ) =>

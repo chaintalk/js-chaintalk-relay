@@ -36,24 +36,23 @@ export default class CommonUtil
 		return announceAddresses
 	}
 
-	static getListenAddresses( argv )
+	static getListenAddresses( port )
 	{
 		//let listenAddresses = [ '/ip4/127.0.0.1/tcp/10010/ws', '/ip4/127.0.0.1/tcp/10000' ]
-		let listenAddresses = [ '/ip4/0.0.0.0/tcp/10000', '/ip4/0.0.0.0/tcp/10010/ws' ]
-		const argvAddr = argv.listenMultiaddrs || argv.lm
-
-		if ( argvAddr )
-		{
-			listenAddresses = [ argvAddr ]
-
-			const extraParams = this.getExtraParams( '--listenMultiaddrs', '--lm' )
-			extraParams.forEach( ( p ) => listenAddresses.push( p ) )
-		}
-		else if ( process.env.LISTEN_MULTIADDRS )
-		{
-			listenAddresses = process.env.LISTEN_MULTIADDRS.split( ',' )
-		}
-
-		return listenAddresses
+		// let listenAddresses = [ '/ip4/0.0.0.0/tcp/10000/ws' ]
+		// const argvAddr = argv.listenMultiaddrs || argv.lm
+		//
+		// if ( argvAddr )
+		// {
+		// 	listenAddresses = [ argvAddr ]
+		//
+		// 	const extraParams = this.getExtraParams( '--listenMultiaddrs', '--lm' )
+		// 	extraParams.forEach( ( p ) => listenAddresses.push( p ) )
+		// }
+		// else if ( process.env.LISTEN_MULTIADDRS )
+		// {
+		// 	listenAddresses = process.env.LISTEN_MULTIADDRS.split( ',' )
+		// }
+		return [ `/ip4/0.0.0.0/tcp/${ port }/ws` ];
 	}
 }

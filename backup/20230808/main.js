@@ -7,14 +7,13 @@ import CommonUtil from './utils/CommonUtil.js';
 import RelayNode from './providers/RelayNode.js';
 import SwarmKeyStorage from './utils/SwarmKeyStorage.js';
 import LogUtil from "./utils/LogUtil.js";
-import { PeerIdLoader } from "./utils/PeerIdLoader.js";
 
 const argv = minimist( process.argv.slice( 2 ) );
 
 
 /**
  * 	command line args:
- * 	--p				: [required] e.g.: 9911
+ * 	--n				: [required] e.g.: 9911
  *
  * 	--peerId			: e.g.: /etc/chaintalk-boot/.peerId
  * 		env.PEER_ID
@@ -27,16 +26,16 @@ const argv = minimist( process.argv.slice( 2 ) );
  */
 async function main()
 {
-	const port = argv.p;
-	const peerIdObject = await PeerIdLoader.loadPeerIdById( port );
-	if ( null === peerIdObject )
-	{
-		throw new Error( `Please specify port via the --p` );
-	}
+	//	Metrics
+	//let metricsServer
+	// const metrics = !(
+	// 	argv.disableMetrics || process.env.DISABLE_METRICS
+	// )
+	// const metricsPort = argv.metricsPort || argv.mp || process.env.METRICS_PORT || '8003'
 
 	//	multiaddrs
-	const listenAddresses	= CommonUtil.getListenAddresses( port );
-	const announceAddresses	= CommonUtil.getAnnounceAddresses( argv )
+	const listenAddresses = CommonUtil.getListenAddresses( argv )
+	const announceAddresses = CommonUtil.getAnnounceAddresses( argv )
 
 	LogUtil.say( `listenAddresses: ${ listenAddresses.map( ( a ) => a ) }` )
 	announceAddresses.length && LogUtil.say( `announceAddresses: ${ announceAddresses.map( ( a ) => a ) }` )
@@ -46,25 +45,46 @@ async function main()
 		argv.disablePubsubDiscovery || process.env.DISABLE_PUBSUB_DISCOVERY
 	)
 
+	//	argv.peerId is the full filename of the file where the peerId object is stored
+	const peerIdFilename = argv.peerId || process.env.PEER_ID || undefined;
+	let basePeerIdObject = await RelayNode.recoverPeerId( peerIdFilename );
+	if ( basePeerIdObject )
+	{
+		LogUtil.say( 'peerId provided was loaded.' );
+	}
+	else
+	{
+		//	peerId
+		//	{
+		//		_id : Uint8Array(34) { 0 : 18, 1: 32. 2: 140, 3: 99, ... }
+		//		_idB58String : "QmXng7pcVBkUuBLM5dWfxaemVxgG8jce81MXQVkzadbFCL"
+		//		_privKey : RsaPrivateKey { ... }
+		//		_pubKey : RsaPublicKey { ... }
+		//	}
+		basePeerIdObject = await RelayNode.createAndSavePeerId();
+		LogUtil.say( 'You are using an automatically generated peer.' )
+		LogUtil.say( `If you want to keep the same address for the server you should provide a peerId with --peerId <jsonFilePath>` )
+	}
+
 	//	swarm key
 	const swarmKey = await SwarmKeyStorage.loadSwarmKey();
 	const swarmKeyObject = SwarmKeyStorage.swarmKeyToObject( swarmKey );
-	if ( ! SwarmKeyStorage.isValidSwarmObject( swarmKeyObject ) )
+	if ( ! SwarmKeyStorage.isValidSwarmKeyToObject( swarmKeyObject ) )
 	{
 		LogUtil.say( `invalid swarm key. Please first create a new swarm key with command <npm run swarm-key>` );
 		return;
 	}
-	LogUtil.say( `swarm key: ${ swarmKeyObject.key }` );
+	LogUtil.say( `swarm key: ${ chalk.bold( swarmKeyObject.key ) }` );
 
 	//	Create Relay
 	const relay = await RelayNode.create( {
-		peerId : peerIdObject,
+		peerId : basePeerIdObject,
 		swarmKey : swarmKey,
 		listenAddresses : listenAddresses,
 		announceAddresses : announceAddresses,
 		pubsubDiscoveryEnabled : pubsubDiscoveryEnabled
 	} );
-	await relay.start();
+	await relay.start()
 	LogUtil.say( 'Bootstrap Relay Server listening on:' );
 	const multiaddrs = relay.getMultiaddrs();
 	multiaddrs.forEach( ( ma ) => {

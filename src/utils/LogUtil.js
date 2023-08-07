@@ -36,7 +36,7 @@ export default class LogUtil
 		this.output( LogUtil.LEVEL_FATAL, args );
 	}
 
-	static broadcast( ...args )
+	static say( ...args )
 	{
 		for ( const arg of args )
 		{
