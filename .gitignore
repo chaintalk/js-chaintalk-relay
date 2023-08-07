@@ -4,6 +4,7 @@
 /package-lock.json
 /.peerId
 /.swarmKey
+/_peerIds.js
 
 
 # Logs
