@@ -1,5 +1,5 @@
 import minimist from "minimist";
-import { _peerIds } from "../_peerIds.js";
+import { _peerIds } from "../../_peerIds.js";
 
 const argv = minimist( process.argv.slice( 2 ) );
 

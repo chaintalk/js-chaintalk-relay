@@ -1,5 +1,5 @@
 import { fromString as uint8ArrayFromString, toString as uint8ArrayToString } from 'uint8arrays'
-import SwarmKeyStorage from './utils/SwarmKeyStorage.js';
+import SwarmKeyStorage from '../utils/SwarmKeyStorage.js';
 
 
 async function swarmKeyFunc()

@@ -16,12 +16,6 @@ const argv = minimist( process.argv.slice( 2 ) );
  * 	command line args:
  * 	--p				: [required] e.g.: 9911
  *
- * 	--peerId			: e.g.: /etc/chaintalk-boot/.peerId
- * 		env.PEER_ID
- * 	--listenMultiaddrs		: e.g.: /ip4/0.0.0.0/tcp/10000/ws
- * 		env.LISTEN_MULTIADDRS
- * 	--announceMultiaddrs		:
- * 		env.ANNOUNCE_MULTIADDRS
  * 	--disablePubsubDiscovery	: e.g.: false
  *		env.DISABLE_PUBSUB_DISCOVERY
  */
@@ -70,26 +64,6 @@ async function main()
 	multiaddrs.forEach( ( ma ) => {
 		LogUtil.say( `${ ma.toString() }` );
 	} );
-
-	// if ( metrics )
-	// {
-	// 	LogUtil.info( 'enabling metrics' )
-	// 	metricsServer = http.createServer( ( req, res ) =>
-	// 	{
-	// 		if ( req.url !== '/metrics' )
-	// 		{
-	// 			res.statusCode = 200
-	// 			res.end()
-	// 		}
-	// 	} )
-	//
-	// 	menoetius.instrument( metricsServer )
-	//
-	// 	metricsServer.listen( metricsPort, '0.0.0.0', () =>
-	// 	{
-	// 		LogUtil.info( `metrics server listening on ${ metricsPort }` )
-	// 	} )
-	// }
 
 	const stop = async () =>
 	{

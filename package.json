@@ -11,9 +11,9 @@
 		"help": "node src/help.js",
 		"dev": "node src/main.js",
 		"start": "node src/main.js",
-		"swarm-key-generator": "node src/SwarmKeyGenerator.js",
-		"peer-id-generator": "node src/PeerIdGenerator.js",
-		"bootstrappers-generator": "node src/BootstrappersGenerator.js"
+		"swarm-key-generator": "node src/tools/SwarmKeyGenerator.js",
+		"peer-id-generator": "node src/tools/PeerIdGenerator.js",
+		"bootstrappers-generator": "node src/tools/BootstrappersGenerator.js"
 	},
 	"type": "module",
 	"files": [

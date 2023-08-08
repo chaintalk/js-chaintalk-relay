@@ -22,6 +22,9 @@ import { pubsubPeerDiscovery } from '@libp2p/pubsub-peer-discovery'
 import { circuitRelayTransport, circuitRelayServer } from 'libp2p/circuit-relay'
 import { identifyService } from 'libp2p/identify'
 
+import { fromString as uint8ArrayFromString } from 'uint8arrays/from-string'
+import { toString as uint8ArrayToString } from 'uint8arrays/to-string'
+
 import PeerIdStorage from '../utils/PeerIdStorage.js';
 import { _bootstrappers } from "../../_bootstrappers.js";
 //import { RSAPeerId } from "@libp2p/interface-peer-id";
@@ -148,7 +151,18 @@ export default class RelayNode
 			services : {
 				relay : circuitRelayServer(),
 				identify : identifyService(),
-				pubsub: floodsub(),
+				pubsub: floodsub({
+					enabled: true,
+
+					//	handle this many incoming pubsub messages concurrently
+					messageProcessingConcurrency: 32,
+
+					//	How many parallel incoming streams to allow on the pubsub protocol per-connection
+					maxInboundStreams: 32,
+
+					//	How many parallel outgoing streams to allow on the pubsub protocol per-connection
+					maxOutboundStreams: 32,
+				}),
 			},
 			connectionManager: {
 				maxConnections: 1024,
@@ -165,14 +179,88 @@ export default class RelayNode
 		const node = await createLibp2p( options );
 		node.addEventListener( 'peer:connect', ( evt ) =>
 		{
-			const peerId = evt.detail;
-			console.log( 'Connection established to:', peerId.toString() ) // Emitted when a peer has been found
+			try
+			{
+				const peerId = evt.detail;
+				console.log( 'Connection established to:', peerId.toString() ) // Emitted when a peer has been found
+			}
+			catch ( err )
+			{
+				console.error( err );
+			}
 		} );
 		node.addEventListener( 'peer:discovery', ( evt ) =>
 		{
-			const peerInfo = evt.detail;
-			console.log( 'Discovered:', peerInfo.id.toString() )
+			try
+			{
+				const peerInfo = evt.detail;
+				console.log( `peerInfo : `, peerInfo );
+				//node.dial( peerInfo.id );
+				console.log( `Discovered: ${ peerInfo.id.toString() }` )
+			}
+			catch ( err )
+			{
+				console.error( err );
+			}
 		} );
+
+		//
+		//	pub/sub
+		//
+		const topic = 'news';
+		node.services.pubsub.subscribe( topic )
+		node.services.pubsub.addEventListener('message', (evt) =>
+		{
+			try
+			{
+				const recType = evt.detail.type;
+				const recTopic = evt.detail.topic;
+				if ( 'signed' !== recType || topic !== recTopic )
+				{
+					//console.log( `- receivedIrrelevant topics are received and discarded voluntarily` );
+					return;
+				}
+
+				const recFrom = evt.detail.from;
+				const recSequence = evt.detail.sequenceNumber;
+				const recData = new TextDecoder().decode( evt.detail.data );
+				// let recObject	= null;
+				// if ( 'string' === typeof recData )
+				// {
+				// 	recObject = JSON.parse( recData.trim() );
+				// }
+				const signature = new TextDecoder().decode( evt.detail.signature );
+				console.log( `received [${ recSequence }] \n- from: ${ recFrom }\n- type: ${ recType }\n- topic ${ recTopic }` );
+				console.log( `- data: ${ recData }` );
+				// console.log( `signature: ${ signature }` );
+				console.log( `\n` );
+			}
+			catch ( err )
+			{
+				console.error( err );
+			}
+		});
+
+		// node2 publishes "news" every second
+		setInterval(() =>
+		{
+			const datetime = new Date().toISOString();
+			console.log( `[${ datetime }] publish a news` );
+			const pubObject = {
+				datetime : datetime,
+				message : 'hello world!',
+			};
+			//const pubString = `[${ new Date().toLocaleString() }] Bird bird bird, bird is the word!`;
+			const pubString = JSON.stringify( pubObject );
+			const pubData = new TextEncoder().encode( pubString );
+			node.services.pubsub
+				.publish( topic, pubData )
+				.catch( err => {
+					console.error(err)
+				} );
+
+		}, 3e3 );
+
 
 		return node;
 	}

@@ -1,7 +1,7 @@
-import PeerIdStorage from "./utils/PeerIdStorage.js";
-import RelayNode from "./providers/RelayNode.js";
+import PeerIdStorage from "../utils/PeerIdStorage.js";
+import RelayNode from "../providers/RelayNode.js";
 import minimist from "minimist";
-import TypeUtil from "./utils/TypeUtil.js";
+import TypeUtil from "../utils/TypeUtil.js";
 const argv = minimist( process.argv.slice( 2 ) );
 
 /**
