@@ -1,6 +1,6 @@
-# js-chaintalk-dns
+# js-chaintalk-relay
 
-A libp2p HOP Relay Server
+ChainTalk Relay Server
 
 
 

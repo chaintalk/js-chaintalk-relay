@@ -1,4 +1,4 @@
-export default class TypeUtil
+export class TypeUtil
 {
 	static isObject( data )
 	{

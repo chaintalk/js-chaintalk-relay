@@ -1,6 +1,6 @@
-import TypeUtil from "./TypeUtil";
+import { TypeUtil } from "./TypeUtil";
 
-export default class ObjectUtil
+export class ObjectUtil
 {
 	static deepGet( object, keyChain )
 	{

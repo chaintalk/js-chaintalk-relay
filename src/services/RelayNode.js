@@ -1,16 +1,6 @@
 import { createLibp2p } from 'libp2p';
 import { preSharedKey } from 'libp2p/pnet';
-
-//import { NOISE } from 'libp2p-noise';
-//import GossipSub from 'libp2p-gossipsub';
-//import TCP from 'libp2p-tcp';
-//import MPLEX from 'libp2p-mplex';
-//import Websockets from 'libp2p-websockets';
-//import PubsubPeerDiscovery from 'libp2p-pubsub-peer-discovery';
-
-import { peerIdFromString } from '@libp2p/peer-id'
-//import { PeerIdType, type PeerId } from '@libp2p/interface-peer-id';
-import { createRSAPeerId, createFromJSON, exportToProtobuf } from '@libp2p/peer-id-factory'
+import { createRSAPeerId, createFromJSON } from '@libp2p/peer-id-factory'
 import { noise } from '@chainsafe/libp2p-noise'
 import { yamux } from '@chainsafe/libp2p-yamux'
 import { mplex } from '@libp2p/mplex'
@@ -25,12 +15,12 @@ import { identifyService } from 'libp2p/identify'
 import { fromString as uint8ArrayFromString } from 'uint8arrays/from-string'
 import { toString as uint8ArrayToString } from 'uint8arrays/to-string'
 
-import PeerIdStorage from '../utils/PeerIdStorage.js';
+import { PeerIdStorageService } from './storage/PeerIdStorageService.js';
 import { _bootstrappers } from "../../_bootstrappers.js";
 //import { RSAPeerId } from "@libp2p/interface-peer-id";
 
 
-export default class RelayNode
+export class RelayNode
 {
 	/**
 	 * @typedef {import('peer-id')} PeerId
@@ -194,7 +184,7 @@ export default class RelayNode
 			try
 			{
 				const peerInfo = evt.detail;
-				console.log( `peerInfo : `, peerInfo );
+				//console.log( `peerInfo : `, peerInfo );
 				//node.dial( peerInfo.id );
 				console.log( `Discovered: ${ peerInfo.id.toString() }` )
 			}
@@ -223,13 +213,13 @@ export default class RelayNode
 
 				const recFrom = evt.detail.from;
 				const recSequence = evt.detail.sequenceNumber;
-				const recData = new TextDecoder().decode( evt.detail.data );
+				const recData = uint8ArrayToString( evt.detail.data );
 				// let recObject	= null;
 				// if ( 'string' === typeof recData )
 				// {
 				// 	recObject = JSON.parse( recData.trim() );
 				// }
-				const signature = new TextDecoder().decode( evt.detail.signature );
+				const signature = uint8ArrayToString( evt.detail.signature );
 				console.log( `received [${ recSequence }] \n- from: ${ recFrom }\n- type: ${ recType }\n- topic ${ recTopic }` );
 				console.log( `- data: ${ recData }` );
 				// console.log( `signature: ${ signature }` );
@@ -252,7 +242,7 @@ export default class RelayNode
 			};
 			//const pubString = `[${ new Date().toLocaleString() }] Bird bird bird, bird is the word!`;
 			const pubString = JSON.stringify( pubObject );
-			const pubData = new TextEncoder().encode( pubString );
+			const pubData = uint8ArrayFromString( pubString );
 			node.services.pubsub
 				.publish( topic, pubData )
 				.catch( err => {
@@ -289,7 +279,7 @@ export default class RelayNode
 	 */
 	static async recoverPeerId( peerIdDataFilename )
 	{
-		const peerData = await PeerIdStorage.loadPeerIdData( peerIdDataFilename );
+		const peerData = await PeerIdStorageService.loadPeerIdData( peerIdDataFilename );
 		if ( peerData )
 		{
 			//	{ id: string, privKey?: string, pubKey?: string }
@@ -314,6 +304,6 @@ export default class RelayNode
 		//		_privKey : RsaPrivateKey { ... }
 		//		_pubKey : RsaPublicKey { ... }
 		//	}
-		return await PeerIdStorage.savePeerIdData( peerIdObject );
+		return await PeerIdStorageService.savePeerIdData( peerIdObject );
 	}
 }

@@ -1,4 +1,4 @@
-export default class LogUtil
+export class LogUtil
 {
 	static LEVEL_DEBUG	= 0;
 	static LEVEL_INFO	= 1;

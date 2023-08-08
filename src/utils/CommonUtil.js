@@ -1,4 +1,4 @@
-export default class CommonUtil
+export class CommonUtil
 {
 	static getExtraParams( alias1, alias2 )
 	{

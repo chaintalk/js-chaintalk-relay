@@ -2,16 +2,16 @@ import fs from 'fs';
 import { generateKey } from 'libp2p/pnet';
 import { toString as uint8ArrayToString } from "uint8arrays";
 
-import Storage from './Storage.js';
-import LogUtil from "./LogUtil.js";
-import TypeUtil from "./TypeUtil.js";
+import { StorageService } from './StorageService.js';
+import { LogUtil } from "../../utils/LogUtil.js";
+import { TypeUtil } from "../../utils/TypeUtil.js";
 
 
-export default class SwarmKeyStorage
+export class SwarmKeyStorageService
 {
 	static getSwarmKeyFilename()
 	{
-		return `${ Storage.getRootDirectory() }/.swarmKey`;
+		return `${ StorageService.getRootDirectory() }/.swarmKey`;
 	}
 
 	static isValidSwarmObject( swarmKeyObject )
@@ -68,14 +68,14 @@ export default class SwarmKeyStorage
 	static async generateSwarmKey()
 	{
 		//	load from local file .swarmKey
-		const swarmKey = await SwarmKeyStorage.loadSwarmKey();
+		const swarmKey = await SwarmKeyStorageService.loadSwarmKey();
 		if ( swarmKey )
 		{
 			return swarmKey;
 		}
 
 		//	generate a new swarmKey
-		const writer = fs.createWriteStream( SwarmKeyStorage.getSwarmKeyFilename(), {
+		const writer = fs.createWriteStream( SwarmKeyStorageService.getSwarmKeyFilename(), {
 			encoding : "utf8",
 			flag : "w",
 			mode : 0o666
@@ -84,7 +84,7 @@ export default class SwarmKeyStorage
 		writer.close();
 
 		//	load and return
-		return await SwarmKeyStorage.loadSwarmKey();
+		return await SwarmKeyStorageService.loadSwarmKey();
 	}
 
 	static async loadSwarmObject( filename )
@@ -105,35 +105,28 @@ export default class SwarmKeyStorage
 	}
 	static async loadSwarmKey( filename )
 	{
-		return new Promise( ( resolve, reject ) =>
+		return new Promise( async ( resolve, reject ) =>
 		{
 			try
 			{
-				const swarmKeyFilename = filename || SwarmKeyStorage.getSwarmKeyFilename();
+				const swarmKeyFilename = filename || SwarmKeyStorageService.getSwarmKeyFilename();
 				if ( ! fs.existsSync( swarmKeyFilename ) )
 				{
-					LogUtil.debug( `swarmKey file not found` );
+					LogUtil.debug( `swarmKey file not found : ${ swarmKeyFilename }` );
 					return resolve( null );
 				}
 
 				//	...
-				fs.readFile( swarmKeyFilename, ( err, data ) =>
+				const data = await StorageService.loadDataFromFile( swarmKeyFilename );
+				if ( ! data instanceof Uint8Array ||
+					0 === data.byteLength ||
+					0 === data.length )
 				{
-					if ( err )
-					{
-						throw err;
-					}
+					LogUtil.debug( `invalid swarmKey file` );
+					return resolve( null );
+				}
 
-					if ( ! data instanceof Uint8Array ||
-						0 === data.byteLength ||
-						0 === data.length )
-					{
-						LogUtil.debug( `invalid swarmKey file` );
-						return resolve( null );
-					}
-
-					resolve( data );
-				} );
+				resolve( data );
 			}
 			catch ( err )
 			{

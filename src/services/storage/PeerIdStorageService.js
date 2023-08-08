@@ -2,17 +2,17 @@ import path from "path";
 import fs from 'fs';
 import { fromString as uint8ArrayFromString, toString as uint8ArrayToString } from 'uint8arrays'
 
-import Storage from './Storage.js';
-import LogUtil from './LogUtil.js';
-import TypeUtil from './TypeUtil.js';
+import { StorageService } from './StorageService.js';
+import { LogUtil } from '../../utils/LogUtil.js';
+import { TypeUtil } from '../../utils/TypeUtil.js';
 
 
 
-export default class PeerIdStorage
+export class PeerIdStorageService
 {
 	static getPeerIdDataFilename()
 	{
-		return `${ Storage.getRootDirectory() }/.peerId`;
+		return `${ StorageService.getRootDirectory() }/.peerId`;
 	}
 
 	static basePeerIdObjectToPeerIdJson( basePeerIdObject )
@@ -67,27 +67,20 @@ export default class PeerIdStorage
 
 	static async loadPeerIdData( filename )
 	{
-		return new Promise( ( resolve, reject ) =>
+		return new Promise( async ( resolve, reject ) =>
 		{
 			try
 			{
-				const peerIdDataFilename = filename || PeerIdStorage.getPeerIdDataFilename();
+				const peerIdDataFilename = filename || PeerIdStorageService.getPeerIdDataFilename();
 				if ( ! fs.existsSync( peerIdDataFilename ) )
 				{
 					LogUtil.debug( `peerId data file not found` );
 					return resolve( null );
 				}
 
-				//	...
-				fs.readFile( peerIdDataFilename, ( err, data ) =>
-				{
-					if ( err )
-					{
-						throw err;
-					}
-
-					resolve( this.peerIdObjectFromJson( data ) );
-				} );
+				const jsonString = await StorageService.loadDataFromFile( peerIdDataFilename );
+				const peerIdObject = this.peerIdObjectFromJson( jsonString );
+				resolve( peerIdObject );
 			}
 			catch ( err )
 			{
@@ -108,31 +101,19 @@ export default class PeerIdStorage
 	 */
 	static savePeerIdData( peerIdObject )
 	{
-		if ( ! TypeUtil.isNotNullObject( peerIdObject ) )
-		{
-			throw new Error( `invalid peerIdData` );
-		}
-
-		return new Promise( ( resolve, reject ) =>
+		return new Promise( async ( resolve, reject ) =>
 		{
 			try
 			{
+				if ( ! TypeUtil.isNotNullObject( peerIdObject ) )
+				{
+					return reject( `invalid peerIdData` );
+				}
+
 				const peerIdJson = this.basePeerIdObjectToPeerIdJson( peerIdObject );
 				const peerIdJsonString = JSON.stringify( peerIdJson );
-				const filename = PeerIdStorage.getPeerIdDataFilename();
-				fs.writeFile( filename, peerIdJsonString, {
-					encoding : "utf8",
-					flag : "w",
-					mode : 0o666
-				}, ( err ) =>
-				{
-					if ( err )
-					{
-						reject( err );
-					}
-
-					resolve( true );
-				} );
+				const filename = PeerIdStorageService.getPeerIdDataFilename();
+				await StorageService.saveDataToFile( filename, peerIdJsonString );
 			}
 			catch ( err )
 			{
