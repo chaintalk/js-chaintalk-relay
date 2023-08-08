@@ -7,6 +7,7 @@ import { mplex } from '@libp2p/mplex'
 import { tcp } from '@libp2p/tcp';
 import { webSockets } from '@libp2p/websockets';
 import { bootstrap } from '@libp2p/bootstrap'
+//import { verifySignature } from '@libp2p/pubsub';
 import { floodsub } from '@libp2p/floodsub'
 import { pubsubPeerDiscovery } from '@libp2p/pubsub-peer-discovery'
 import { circuitRelayTransport, circuitRelayServer } from 'libp2p/circuit-relay'
@@ -17,6 +18,7 @@ import { toString as uint8ArrayToString } from 'uint8arrays/to-string'
 
 import { PeerIdStorageService } from './storage/PeerIdStorageService.js';
 import { _bootstrappers } from "../../_bootstrappers.js";
+import { _swarmPeers } from "../../_swarmPeers.js";
 //import { RSAPeerId } from "@libp2p/interface-peer-id";
 
 
@@ -152,6 +154,16 @@ export class RelayNode
 
 					//	How many parallel outgoing streams to allow on the pubsub protocol per-connection
 					maxOutboundStreams: 32,
+
+					//		const {
+					// 			multicodecs = [],
+					// 			globalSignaturePolicy = 'StrictSign',
+					// 			canRelayMessage = false,
+					// 			emitSelf = false,
+					// 			messageProcessingConcurrency = 10,
+					// 			maxInboundStreams = 1,
+					// 			maxOutboundStreams = 1
+					// 		} = props
 				}),
 			},
 			connectionManager: {
@@ -187,12 +199,21 @@ export class RelayNode
 				//console.log( `peerInfo : `, peerInfo );
 				//node.dial( peerInfo.id );
 				console.log( `Discovered: ${ peerInfo.id.toString() }` )
+
+				//
+				//	Notifies the router that a peer has been connected
+				//		addPeer( peerId : PeerId, protocol : string ) : PeerStreams
+				//
+				const newPeerStreams = node.services.pubsub.addPeer( peerInfo.id, 'ws' );
 			}
 			catch ( err )
 			{
 				console.error( err );
 			}
 		} );
+
+		const allSwarmPeers = Object.values( _swarmPeers ).map( item => item.id );
+		console.log( `allSwarmPeers : `, allSwarmPeers );
 
 		//
 		//	pub/sub
@@ -203,6 +224,56 @@ export class RelayNode
 		{
 			try
 			{
+				//
+				//	evt:
+				//	CustomEventPolyfill {
+				//   		type: 'message',
+				//   		defaultPrevented: false,
+				//   		cancelable: false,
+				//   		timeStamp: 126177.69412505627
+				// 	}
+				//
+				//
+				//	evt.detail:
+				//{
+				//   type: 'signed',
+				//   from: PeerId(QmV7tUHJnYD2PbDCiUo6g57SRKbeGYKuvj1Th16hFvLa3U),
+				//   topic: 'news',
+				//   sequenceNumber: 17497035497166456225n,
+				//   data: Uint8Array(64) [
+				//     123,  34, 100,  97, 116, 101, 116, 105, 109, 101,  34,
+				//      58,  34,  50,  48,  50,  51,  45,  48,  56,  45,  48,
+				//      56,  84,  49,  56,  58,  53,  53,  58,  51,  54,  46,
+				//      48,  54,  55,  90,  34,  44,  34, 109, 101, 115, 115,
+				//      97, 103, 101,  34,  58,  34, 104, 101, 108, 108, 111,
+				//      32, 119, 111, 114, 108, 100,  33,  34, 125
+				//   ],
+				//   signature: Uint8Array(256) [
+				//     104,  34, 164, 251, 106, 191, 215, 238, 244, 136, 162, 179,
+				//     208,  44,  95,  22, 175, 199,  67, 174,  95, 254, 149, 158,
+				//      39,  63, 175, 227, 126,  51,  87, 125, 162, 146, 107,  89,
+				//     224, 154,   8,  46, 242,  48,  71, 223, 171,  77, 225,  62,
+				//     144, 129, 170, 248, 243, 105, 220, 213,  44, 228, 104, 103,
+				//      88, 164, 154,  30, 130, 148, 115,  42,  27, 233, 152, 144,
+				//      59, 231,   4,  82,  12, 215, 190,  75,  94, 115, 232,  36,
+				//      67,  73,  87,  52, 241, 146, 227,  93,  20, 185, 128, 221,
+				//      88, 179, 243,  29,
+				//     ... 156 more items
+				//   ],
+				//   key: Uint8Array(299) [
+				//       8,   0,  18, 166,   2,  48, 130,   1,  34,  48,  13,   6,
+				//       9,  42, 134,  72, 134, 247,  13,   1,   1,   1,   5,   0,
+				//       3, 130,   1,  15,   0,  48, 130,   1,  10,   2, 130,   1,
+				//       1,   0, 192, 115,  33,  36,  22,  25, 113, 212,  49, 115,
+				//     255, 119,  22, 136,   5, 164, 102, 222, 109,  73,   5, 248,
+				//     239, 106, 235, 210, 211,  20, 114,  62,  91, 195,   3, 158,
+				//     251, 102, 242,  27, 185,  44,  68,  63,  21, 255, 247, 244,
+				//     208,  52,  37, 137, 174,  28, 131,  99,  94,  88,  40,  12,
+				//     210, 123, 110, 128,
+				//     ... 199 more items
+				//   ]
+				// }
+
 				const recType = evt.detail.type;
 				const recTopic = evt.detail.topic;
 				if ( 'signed' !== recType || topic !== recTopic )
@@ -211,6 +282,48 @@ export class RelayNode
 					return;
 				}
 
+				//
+				//	check peer exists in our swarm peer list
+				//
+				if ( ! allSwarmPeers.includes( evt.detail.from ) )
+				{
+					console.error( `invalid swarm peer : ${ evt.detail.from }` );
+					return;
+				}
+
+				//	...
+				const allSubscribers = node.services.pubsub.getSubscribers( topic );
+				const allTopics = node.services.pubsub.getTopics();
+				const allPeers = node.services.pubsub.getPeers();
+				console.log( `allSubscribers : `, allSubscribers );
+				console.log( `allTopics : `, allTopics );
+				console.log( `allPeers : `, allPeers );
+
+				//
+				//	Validates the given message. The signature will be checked for authenticity.
+				//	Throws an error on invalid messages
+				//
+				try
+				{
+					node.services.pubsub.validate( evt.detail.from, evt.detail );
+				}
+				catch ( errValidate )
+				{
+					console.error( errValidate );
+					return;
+				}
+
+				//		getMsgId( msg : Message ) : Promise<Uint8Array> | Uint8Array
+				const msgIdUInt8Arr = node.services.pubsub.getMsgId( evt.detail );
+				if ( msgIdUInt8Arr instanceof Uint8Array )
+				{
+					const msgId = uint8ArrayToString( msgIdUInt8Arr );
+					console.log( `msgId : ${ msgIdUInt8Arr }` );
+				}
+
+				//
+				//	....
+				//
 				const recFrom = evt.detail.from;
 				const recSequence = evt.detail.sequenceNumber;
 				const recData = uint8ArrayToString( evt.detail.data );
@@ -222,7 +335,7 @@ export class RelayNode
 				const signature = uint8ArrayToString( evt.detail.signature );
 				console.log( `received [${ recSequence }] \n- from: ${ recFrom }\n- type: ${ recType }\n- topic ${ recTopic }` );
 				console.log( `- data: ${ recData }` );
-				// console.log( `signature: ${ signature }` );
+				//console.log( `- signature: ${ signature }` );
 				console.log( `\n` );
 			}
 			catch ( err )
