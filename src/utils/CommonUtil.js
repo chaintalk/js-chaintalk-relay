@@ -36,8 +36,9 @@ export class CommonUtil
 		return announceAddresses
 	}
 
-	static getListenAddresses( port )
+	static getListenAddresses( argv )
 	{
+		const port = argv.p || 9911;
 		//let listenAddresses = [ '/ip4/127.0.0.1/tcp/10010/ws', '/ip4/127.0.0.1/tcp/10000' ]
 		// let listenAddresses = [ '/ip4/0.0.0.0/tcp/10000/ws' ]
 		// const argvAddr = argv.listenMultiaddrs || argv.lm

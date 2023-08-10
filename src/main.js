@@ -3,11 +3,9 @@
 import minimist from 'minimist';
 import { CommonUtil } from './utils/CommonUtil.js';
 import { RelayNode } from './services/RelayNode.js';
-import { SwarmKeyStorageService } from './services/storage/SwarmKeyStorageService.js';
-import { LogUtil } from "./utils/LogUtil.js";
-import { PeerIdUtil } from "./utils/PeerIdUtil.js";
-import fs from "fs";
-import { StorageService } from "./services/storage/StorageService.js";
+import { PeerIdService, PeerIdStorageService, SwarmKeyStorageService } from "chaintalk-utils";
+import { LogUtil } from "chaintalk-utils";
+import { SwarmKeyService } from "chaintalk-utils";
 
 const argv = minimist( process.argv.slice( 2 ) );
 
@@ -21,22 +19,25 @@ const argv = minimist( process.argv.slice( 2 ) );
  */
 async function main()
 {
-	if ( ! preRunCheck() )
+	//	...
+	const peerIdObject = await preparePeerId( argv );
+	if ( null === peerIdObject )
 	{
-		LogUtil.say( 'run `npm run help` to get help.' );
-		return;
+		LogUtil.say( `failed to create/load peerId. Create a new peerId using \`chaintalk-utils\`` );
+		return false;
 	}
 
 	//	...
-	const port = argv.p;
-	const peerIdObject = await PeerIdUtil.loadPeerIdByPort( port );
-	if ( null === peerIdObject )
+	const swarmKey = await prepareSwarmKey( argv );
+	if ( null === swarmKey )
 	{
-		throw new Error( `Please specify port via the --p` );
+		LogUtil.say( `invalid swarm key. Create a new swarm key using \`chaintalk-utils\`` );
+		return false;
 	}
 
+	//	...
 	//	multiaddrs
-	const listenAddresses	= CommonUtil.getListenAddresses( port );
+	const listenAddresses	= CommonUtil.getListenAddresses( argv );
 	const announceAddresses	= CommonUtil.getAnnounceAddresses( argv )
 
 	LogUtil.say( `listenAddresses: ${ listenAddresses.map( ( a ) => a ) }` )
@@ -46,16 +47,6 @@ async function main()
 	const pubsubDiscoveryEnabled = ! (
 		argv.disablePubsubDiscovery || process.env.DISABLE_PUBSUB_DISCOVERY
 	)
-
-	//	swarm key
-	const swarmKey = await SwarmKeyStorageService.loadSwarmKey();
-	const swarmKeyObject = SwarmKeyStorageService.swarmKeyToObject( swarmKey );
-	if ( ! SwarmKeyStorageService.isValidSwarmObject( swarmKeyObject ) )
-	{
-		LogUtil.say( `invalid swarm key. Please first create a new swarm key with command <npm run swarm-key>` );
-		return;
-	}
-	LogUtil.say( `swarm key: ${ swarmKeyObject.key }` );
 
 	//	Create Relay
 	const relay = await RelayNode.create( {
@@ -86,29 +77,64 @@ async function main()
 	process.on( 'SIGINT', stop )
 }
 
-function preRunCheck()
+/**
+ *	@param	argv
+ *	@returns {Promise<PeerId|null>}
+ */
+async function preparePeerId( argv )
 {
-	let returnValue = true;
-	const filenameSwarmKey = `${ StorageService.getRootDirectory() }/.swarmKey`;
-	const filenamePeerIds = `${ StorageService.getRootDirectory() }/_swarmPeers.js`;
-	const filenameBootstrappers = `${ StorageService.getRootDirectory() }/_bootstrappers.js`;
-	if ( ! fs.existsSync( filenameSwarmKey ) )
+	const peerIdStorageService = new PeerIdStorageService();
+	const filename = peerIdStorageService.getSafeFilename( argv.peerId || process.env.PEER_ID || undefined );
+	let peerIdObject = null;
+	try
 	{
-		returnValue = false;
-		console.error( `file not found : ${ filenameSwarmKey }` );
+		peerIdObject = await PeerIdService.loadPeerId( filename );
 	}
-	if ( ! fs.existsSync( filenamePeerIds ) )
+	catch ( err )
 	{
-		returnValue = false;
-		console.error( `file not found : ${ filenamePeerIds }` );
-	}
-	if ( ! fs.existsSync( filenameBootstrappers ) )
-	{
-		returnValue = false;
-		console.error( `file not found : ${ filenameBootstrappers }` );
+		console.log( err )
+		LogUtil.say( `failed to load peerId` );
 	}
 
-	return returnValue;
+	if ( null === peerIdObject )
+	{
+		peerIdObject = await PeerIdService.flushPeerId( filename );
+		LogUtil.say( `created a new peerId` );
+	}
+
+	const storagePeerId = peerIdStorageService.storagePeerIdFromRaw( peerIdObject );
+	LogUtil.say( `peerId: ${ storagePeerId.id }, from: ${ filename }` );
+	return peerIdObject;
+}
+
+/**
+ *	@returns {Promise<Uint8Array|null>}
+ */
+async function prepareSwarmKey( argv )
+{
+	const swarmKeyStorageService = new SwarmKeyStorageService();
+	const filename = swarmKeyStorageService.getSafeFilename( argv.swarmKey || process.env.SWARM_KEY || undefined );
+	let swarmKey	= null;
+	let swarmKeyObject	= null;
+
+	try
+	{
+		swarmKey = await SwarmKeyService.loadSwarmKey( filename );
+		swarmKeyObject = swarmKeyStorageService.swarmKeyToObject( swarmKey );
+		LogUtil.say( `swarm key: ${ swarmKeyObject.key }, from: ${ filename }` );
+	}
+	catch ( err )
+	{
+		console.log( err )
+		LogUtil.say( `failed to load swarmKey` );
+	}
+
+	if ( ! swarmKeyStorageService.isValidSwarmKeyObject( swarmKeyObject ) )
+	{
+		return null;
+	}
+
+	return swarmKey;
 }
 
 

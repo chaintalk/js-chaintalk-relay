@@ -1,5 +1,5 @@
 {
-	"name": "js-chaintalk-boot",
+	"name": "js-chaintalk-relay",
 	"version": "1.0.0",
 	"description": "A out of the box libp2p relay server with HOP",
 	"leadMaintainer": "Chain Talk, Team.",
@@ -10,10 +10,7 @@
 	"scripts": {
 		"help": "node src/help.js",
 		"dev": "node src/main.js",
-		"start": "node src/main.js",
-		"swarm-key-generator": "node src/tools/SwarmKeyGenerator.js",
-		"swarm-peers-generator": "node src/tools/SwarmPeersGenerator.js",
-		"swarm-peers-view": "node src/tools/SwarmPeersView.js"
+		"start": "node src/main.js"
 	},
 	"type": "module",
 	"files": [
@@ -31,12 +28,12 @@
 		"hop",
 		"bootstrap"
 	],
-	"author": "Chain Talk, Team.",
+	"author": "ChainTalk, Team.",
 	"license": "MIT",
 	"bugs": {
 		"url": "https://github.com/chaintalk/js-chaintalk-boot/issues"
 	},
-	"homepage": "https://github.com/chaintalk/js-chaintalk-boot#readme",
+	"homepage": "https://github.com/chaintalk/",
 	"dependencies": {
 		"@chainsafe/libp2p-noise": "^13.0.0",
 		"@chainsafe/libp2p-yamux": "^5.0.0",
@@ -50,6 +47,7 @@
 		"@libp2p/pubsub-peer-discovery": "^8.0.4",
 		"@libp2p/tcp": "^8.0.2",
 		"@libp2p/websockets": "^7.0.2",
+		"chaintalk-utils": "^1.0.19",
 		"chalk": "^5.3.0",
 		"libp2p": "^0.46.3",
 		"libp2p-gossipsub": "^0.13.0",

@@ -16,10 +16,8 @@ import { identifyService } from 'libp2p/identify'
 import { fromString as uint8ArrayFromString } from 'uint8arrays/from-string'
 import { toString as uint8ArrayToString } from 'uint8arrays/to-string'
 
-import { PeerIdStorageService } from './storage/PeerIdStorageService.js';
+import { PeerIdStorageService } from 'chaintalk-utils';
 import { _bootstrappers } from "../../_bootstrappers.js";
-import { _swarmPeers } from "../../_swarmPeers.js";
-//import { RSAPeerId } from "@libp2p/interface-peer-id";
 
 
 export class RelayNode
@@ -54,6 +52,11 @@ export class RelayNode
 		}
 	)
 	{
+		//
+		//	@libp2p/pubsub-peer-discovery
+		//	export declare const TOPIC = "_peer-discovery._p2p._pubsub";
+		//
+
 		// let options = {
 		// 	peerId : peerId,
 		// 	modules : {
@@ -136,6 +139,7 @@ export class RelayNode
 				bootstrap({
 					list: _bootstrappers
 				}),
+				//	https://github.com/libp2p/js-libp2p-pubsub-peer-discovery
 				pubsubPeerDiscovery({
 					interval: 1000
 				})
@@ -212,9 +216,6 @@ export class RelayNode
 			}
 		} );
 
-		const allSwarmPeers = Object.values( _swarmPeers ).map( item => item.id );
-		console.log( `allSwarmPeers : `, allSwarmPeers );
-
 		//
 		//	pub/sub
 		//
@@ -276,19 +277,23 @@ export class RelayNode
 
 				const recType = evt.detail.type;
 				const recTopic = evt.detail.topic;
-				if ( 'signed' !== recType || topic !== recTopic )
+				const recFrom = evt.detail.from;
+				const recSequence = evt.detail.sequenceNumber;
+				const recData = uint8ArrayToString( evt.detail.data );
+
+				if ( 'signed' !== recType )
+				{
+					return false;
+				}
+				if ( '_peer-discovery._p2p._pubsub' === recTopic )
+				{
+					//console.log( `<.> HEARTBEAT[${ recSequence }] from ${ recFrom }` );
+					return false;
+				}
+				if ( topic !== recTopic )
 				{
 					//console.log( `- receivedIrrelevant topics are received and discarded voluntarily` );
-					return;
-				}
-
-				//
-				//	check peer exists in our swarm peer list
-				//
-				if ( ! allSwarmPeers.includes( evt.detail.from ) )
-				{
-					console.error( `invalid swarm peer : ${ evt.detail.from }` );
-					return;
+					return false;
 				}
 
 				//	...
@@ -324,9 +329,7 @@ export class RelayNode
 				//
 				//	....
 				//
-				const recFrom = evt.detail.from;
-				const recSequence = evt.detail.sequenceNumber;
-				const recData = uint8ArrayToString( evt.detail.data );
+
 				// let recObject	= null;
 				// if ( 'string' === typeof recData )
 				// {
