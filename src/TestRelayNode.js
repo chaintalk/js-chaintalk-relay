@@ -1,4 +1,3 @@
-import { fromString as uint8ArrayFromString } from "uint8arrays/from-string";
 import minimist from "minimist";
 import { RelayNode } from "./RelayNode.js";
 const argv = minimist( process.argv.slice( 2 ) );

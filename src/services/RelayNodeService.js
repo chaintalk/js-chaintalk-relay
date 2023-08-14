@@ -1,6 +1,6 @@
 import { createLibp2p } from 'libp2p';
 import { preSharedKey } from 'libp2p/pnet';
-import { createRSAPeerId, createFromJSON } from '@libp2p/peer-id-factory'
+//import { createRSAPeerId, createFromJSON } from '@libp2p/peer-id-factory'
 import { noise } from '@chainsafe/libp2p-noise'
 import { yamux } from '@chainsafe/libp2p-yamux'
 import { mplex } from '@libp2p/mplex'
@@ -13,10 +13,10 @@ import { pubsubPeerDiscovery } from '@libp2p/pubsub-peer-discovery'
 import { circuitRelayTransport, circuitRelayServer } from 'libp2p/circuit-relay'
 import { identifyService } from 'libp2p/identify'
 
-import { fromString as uint8ArrayFromString } from 'uint8arrays/from-string'
+//import { fromString as uint8ArrayFromString } from 'uint8arrays/from-string'
 import { toString as uint8ArrayToString } from 'uint8arrays/to-string'
 
-import { PeerIdStorageService, TypeUtil } from 'chaintalk-utils';
+import { TypeUtil } from 'chaintalk-utils';
 import { _bootstrappers } from "../../_bootstrappers.js";
 
 
@@ -282,9 +282,9 @@ export class RelayNodeService
 
 				const recType = evt.detail.type;
 				const recTopic = evt.detail.topic;
-				const recFrom = evt.detail.from;
-				const recSequence = evt.detail.sequenceNumber;
-				const recData = uint8ArrayToString( evt.detail.data );
+				//const recFrom = evt.detail.from;
+				//const recSequence = evt.detail.sequenceNumber;
+				//const recData = uint8ArrayToString( evt.detail.data );
 
 				if ( 'signed' !== recType )
 				{
@@ -303,7 +303,7 @@ export class RelayNodeService
 
 				//	...
 				//const allSubscribers = node.services.pubsub.getSubscribers( this.syncTopic );
-				const allTopics = node.services.pubsub.getTopics();
+				//const allTopics = node.services.pubsub.getTopics();
 				const allPeers = node.services.pubsub.getPeers();
 				//console.log( `allSubscribers : `, allSubscribers );
 				//console.log( `allTopics : `, allTopics );
