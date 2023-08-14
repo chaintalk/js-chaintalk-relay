@@ -1,7 +1,24 @@
 # js-chaintalk-relay
 
-ChainTalk Relay Server
+ChainTalk RelayNode Server
 
+
+# Run Test
+
+### step 1
+```
+run chaintalk-boot
+```
+
+### step 2
+```
+npm run dev -- --port 9911 --peerId ./.relay1.peerId
+npm run dev -- --port 9912 --peerId ./.relay2.peerId
+npm run dev -- --port 9913 --peerId ./.relay3.peerId
+npm run dev -- --port 9914 --peerId ./.relay4.peerId
+npm run dev -- --port 9915 --peerId ./.relay5.peerId
+npm run dev -- --port 9916 --peerId ./.relay6.peerId
+```
 
 
 ### Debug in WebStorm

@@ -1,8 +1,8 @@
 // Usage: $0 [--peerId <jsonFilePath>] [--listenMultiaddrs <ma> ... <ma>] [--announceMultiaddrs <ma> ... <ma>]
 //           [--metricsPort <port>] [--disableMetrics] [--disablePubsubDiscovery]
 import minimist from 'minimist';
-import { CommonUtil } from './utils/CommonUtil.js';
-import { RelayNode } from './services/RelayNode.js';
+import { CommonUtil } from '../src/utils/CommonUtil.js';
+import { RelayNodeService } from '../src/services/RelayNodeService.js';
 import { PeerIdService, PeerIdStorageService, SwarmKeyStorageService } from "chaintalk-utils";
 import { LogUtil } from "chaintalk-utils";
 import { SwarmKeyService } from "chaintalk-utils";
@@ -49,7 +49,7 @@ async function main()
 	)
 
 	//	Create Relay
-	const relay = await RelayNode.create( {
+	const relay = await RelayNodeService.create( {
 		peerId : peerIdObject,
 		swarmKey : swarmKey,
 		listenAddresses : listenAddresses,

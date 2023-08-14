@@ -16,17 +16,23 @@ import { identifyService } from 'libp2p/identify'
 import { fromString as uint8ArrayFromString } from 'uint8arrays/from-string'
 import { toString as uint8ArrayToString } from 'uint8arrays/to-string'
 
-import { PeerIdStorageService } from 'chaintalk-utils';
+import { PeerIdStorageService, TypeUtil } from 'chaintalk-utils';
 import { _bootstrappers } from "../../_bootstrappers.js";
 
 
-export class RelayNode
+export class RelayNodeService
 {
 	/**
-	 * @typedef {import('peer-id')} PeerId
+	 *	@returns {string}
 	 */
+	get syncTopic()
+	{
+		return 'peer-message-sync';
+	}
+
 
 	/**
+	 * @typedef {import('peer-id')} PeerId
 	 * @typedef {Object} HopRelayOptions
 	 * @property {PeerId} [peerId]
 	 * @property {string[]} [listenAddresses = []]
@@ -41,14 +47,14 @@ export class RelayNode
 	 * @param {HopRelayOptions} options
 	 * @returns {Promise<Libp2p>}
 	 */
-	static async create(
+	async create(
 		{
 			peerId = undefined,
 			swarmKey = undefined,
 			listenAddresses = [],
 			announceAddresses = [],
 			pubsubDiscoveryEnabled = true,
-			pubsubDiscoveryTopics = [ '_peer-discovery._p2p._pubsub' ]
+			callbackMessageReceiver = ({ allPeers = [], msgId = null, data = null }) => {}
 		}
 	)
 	{
@@ -219,9 +225,8 @@ export class RelayNode
 		//
 		//	pub/sub
 		//
-		const topic = 'news';
-		node.services.pubsub.subscribe( topic )
-		node.services.pubsub.addEventListener('message', (evt) =>
+		node.services.pubsub.subscribe( this.syncTopic )
+		node.services.pubsub.addEventListener( 'message', ( evt ) =>
 		{
 			try
 			{
@@ -290,19 +295,19 @@ export class RelayNode
 					//console.log( `<.> HEARTBEAT[${ recSequence }] from ${ recFrom }` );
 					return false;
 				}
-				if ( topic !== recTopic )
+				if ( this.syncTopic !== recTopic )
 				{
 					//console.log( `- receivedIrrelevant topics are received and discarded voluntarily` );
 					return false;
 				}
 
 				//	...
-				const allSubscribers = node.services.pubsub.getSubscribers( topic );
+				//const allSubscribers = node.services.pubsub.getSubscribers( this.syncTopic );
 				const allTopics = node.services.pubsub.getTopics();
 				const allPeers = node.services.pubsub.getPeers();
-				console.log( `allSubscribers : `, allSubscribers );
-				console.log( `allTopics : `, allTopics );
-				console.log( `allPeers : `, allPeers );
+				//console.log( `allSubscribers : `, allSubscribers );
+				//console.log( `allTopics : `, allTopics );
+				//console.log( `allPeers : `, allPeers );
 
 				//
 				//	Validates the given message. The signature will be checked for authenticity.
@@ -320,10 +325,19 @@ export class RelayNode
 
 				//		getMsgId( msg : Message ) : Promise<Uint8Array> | Uint8Array
 				const msgIdUInt8Arr = node.services.pubsub.getMsgId( evt.detail );
-				if ( msgIdUInt8Arr instanceof Uint8Array )
+				// if ( msgIdUInt8Arr instanceof Uint8Array )
+				// {
+				// 	const msgId = uint8ArrayToString( msgIdUInt8Arr );
+				// 	console.log( `msgId : ${ msgIdUInt8Arr }` );
+				// }
+
+				if ( TypeUtil.isFunction( callbackMessageReceiver ) )
 				{
-					const msgId = uint8ArrayToString( msgIdUInt8Arr );
-					console.log( `msgId : ${ msgIdUInt8Arr }` );
+					callbackMessageReceiver({
+						allPeers : allPeers,
+						msgId : msgIdUInt8Arr,
+						data : evt.detail,
+					});
 				}
 
 				//
@@ -335,11 +349,11 @@ export class RelayNode
 				// {
 				// 	recObject = JSON.parse( recData.trim() );
 				// }
-				const signature = uint8ArrayToString( evt.detail.signature );
-				console.log( `received [${ recSequence }] \n- from: ${ recFrom }\n- type: ${ recType }\n- topic ${ recTopic }` );
-				console.log( `- data: ${ recData }` );
-				//console.log( `- signature: ${ signature }` );
-				console.log( `\n` );
+				// const signature = uint8ArrayToString( evt.detail.signature );
+				// console.log( `received [${ recSequence }] \n- from: ${ recFrom }\n- type: ${ recType }\n- topic ${ recTopic }` );
+				// console.log( `- data: ${ recData }` );
+				// //console.log( `- signature: ${ signature }` );
+				// console.log( `\n` );
 			}
 			catch ( err )
 			{
@@ -347,79 +361,6 @@ export class RelayNode
 			}
 		});
 
-		// node2 publishes "news" every second
-		setInterval(() =>
-		{
-			const datetime = new Date().toISOString();
-			console.log( `[${ datetime }] publish a news` );
-			const pubObject = {
-				datetime : datetime,
-				message : 'hello world!',
-			};
-			//const pubString = `[${ new Date().toLocaleString() }] Bird bird bird, bird is the word!`;
-			const pubString = JSON.stringify( pubObject );
-			const pubData = uint8ArrayFromString( pubString );
-			node.services.pubsub
-				.publish( topic, pubData )
-				.catch( err => {
-					console.error(err)
-				} );
-
-		}, 3e3 );
-
-
 		return node;
-	}
-
-	/**
-	 * @returns {Promise<RSAPeerId>}
-	 */
-	static async createPeerId()
-	{
-		return await createRSAPeerId();
-	}
-
-	static async createAndSavePeerId()
-	{
-		const peerIdObject = await this.createPeerId();
-		await this.savePeerId( peerIdObject );
-
-		//	...
-		return peerIdObject;
-	}
-
-	/**
-	 * 	recover peer id
-	 *	@param	peerIdDataFilename	{string}	- local full filename
-	 *	@returns {object}
-	 */
-	static async recoverPeerId( peerIdDataFilename )
-	{
-		const peerData = await PeerIdStorageService.loadPeerIdData( peerIdDataFilename );
-		if ( peerData )
-		{
-			//	{ id: string, privKey?: string, pubKey?: string }
-			return await createFromJSON( peerData );
-		}
-
-		return null;
-	}
-
-	/**
-	 * 	save peer id
-	 *	@param peerIdObject
-	 *	@returns {Promise<*>}
-	 */
-	static async savePeerId( peerIdObject )
-	{
-		//
-		//	peerIdObject :
-		//	{
-		//		_id : Uint8Array(34) { 0 : 18, 1: 32. 2: 140, 3: 99, ... }
-		//		_idB58String : "QmXng7pcVBkUuBLM5dWfxaemVxgG8jce81MXQVkzadbFCL"
-		//		_privKey : RsaPrivateKey { ... }
-		//		_pubKey : RsaPublicKey { ... }
-		//	}
-		return await PeerIdStorageService.savePeerIdData( peerIdObject );
 	}
 }

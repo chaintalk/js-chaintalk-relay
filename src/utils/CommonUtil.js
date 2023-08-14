@@ -15,45 +15,4 @@ export class CommonUtil
 
 		return params
 	}
-
-	static getAnnounceAddresses( argv )
-	{
-		let announceAddresses = [];
-		const argvAddr = argv.announceMultiaddrs || argv.am
-
-		if ( argvAddr )
-		{
-			announceAddresses = [ argvAddr ]
-
-			const extraParams = this.getExtraParams( '--announceMultiaddrs', '--am' )
-			extraParams.forEach( ( p ) => announceAddresses.push( p ) )
-		}
-		else if ( process.env.ANNOUNCE_MULTIADDRS )
-		{
-			announceAddresses = process.env.ANNOUNCE_MULTIADDRS.split( ',' )
-		}
-
-		return announceAddresses
-	}
-
-	static getListenAddresses( argv )
-	{
-		const port = argv.p || 9911;
-		//let listenAddresses = [ '/ip4/127.0.0.1/tcp/10010/ws', '/ip4/127.0.0.1/tcp/10000' ]
-		// let listenAddresses = [ '/ip4/0.0.0.0/tcp/10000/ws' ]
-		// const argvAddr = argv.listenMultiaddrs || argv.lm
-		//
-		// if ( argvAddr )
-		// {
-		// 	listenAddresses = [ argvAddr ]
-		//
-		// 	const extraParams = this.getExtraParams( '--listenMultiaddrs', '--lm' )
-		// 	extraParams.forEach( ( p ) => listenAddresses.push( p ) )
-		// }
-		// else if ( process.env.LISTEN_MULTIADDRS )
-		// {
-		// 	listenAddresses = process.env.LISTEN_MULTIADDRS.split( ',' )
-		// }
-		return [ `/ip4/0.0.0.0/tcp/${ port }/ws` ];
-	}
 }

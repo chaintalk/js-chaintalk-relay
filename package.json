@@ -1,16 +1,15 @@
 {
-	"name": "js-chaintalk-relay",
+	"name": "chaintalk-relay",
 	"version": "1.0.0",
-	"description": "A out of the box libp2p relay server with HOP",
+	"description": "ChainTalk Relay Server",
 	"leadMaintainer": "Chain Talk, Team.",
-	"main": "src/main.js",
+	"main": "src/index.js",
 	"bin": {
-		"js-chaintalk-boot": "src/main.js"
+		"js-chaintalk-boot": "backup/main.js"
 	},
 	"scripts": {
 		"help": "node src/help.js",
-		"dev": "node src/main.js",
-		"start": "node src/main.js"
+		"dev": "node src/TestRelayNode.js"
 	},
 	"type": "module",
 	"files": [
