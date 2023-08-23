@@ -13,15 +13,37 @@ import { pubsubPeerDiscovery } from '@libp2p/pubsub-peer-discovery'
 import { circuitRelayTransport, circuitRelayServer } from 'libp2p/circuit-relay'
 import { identifyService } from 'libp2p/identify'
 
-//import { fromString as uint8ArrayFromString } from 'uint8arrays/from-string'
-import { toString as uint8ArrayToString } from 'uint8arrays/to-string'
-
 import { TypeUtil } from 'chaintalk-utils';
 import { _bootstrappers } from "../../_bootstrappers.js";
 
 
 export class RelayNodeService
 {
+	/**
+	 * @typedef {import('@libp2p/interface').Libp2p} Libp2p
+	 *
+	 * @typedef {import('@libp2p/interface/peer-id').PeerId} PeerId
+	 * @typedef {import('@libp2p/interface/peer-id').RSAPeerId} RSAPeerId
+	 * @typedef {import('@libp2p/interface/peer-id').Ed25519PeerId} Ed25519PeerId
+	 * @typedef {import('@libp2p/interface/peer-id').Secp256k1PeerId} Secp256k1PeerId
+	 *
+	 * @typedef {import('@libp2p/interface/pubsub').PubSub} PubSub
+	 * @typedef {import('@libp2p/interface/pubsub').PubSubEvents} PubSubEvents
+	 *
+	 * @typedef {import('libp2p').Libp2pOptions} Libp2pOptions
+	 *
+	 */
+
+
+	/**
+	 * @typedef {Object} HopRelayOptions
+	 * @property {string[]} [listenAddresses = []]
+	 * @property {string[]} [announceAddresses = []]
+	 * @property {boolean} [pubsubDiscoveryEnabled = true]
+	 * @property {string[]} [pubsubDiscoveryTopics = ['_peer-discovery._p2p._pubsub']] uses discovery default
+	 */
+
+
 	/**
 	 *	@returns {string}
 	 */
@@ -31,21 +53,30 @@ export class RelayNodeService
 	}
 
 
+
 	/**
-	 * @typedef {import('peer-id')} PeerId
-	 * @typedef {Object} HopRelayOptions
-	 * @property {PeerId} [peerId]
-	 * @property {string[]} [listenAddresses = []]
-	 * @property {string[]} [announceAddresses = []]
-	 * @property {boolean} [pubsubDiscoveryEnabled = true]
-	 * @property {string[]} [pubsubDiscoveryTopics = ['_peer-discovery._p2p._pubsub']] uses discovery default
+	 * 	@typedef CallbackMessageReceiverOptions {Object}
+	 * 	@property allPeers {PeerId[]}
+	 * 	@property msgId {Uint8Array[]}
+	 * 	@property data {any}
+	 *
+	 * 	@callback CallbackMessageReceiver
+	 *	@param callbackOptions {CallbackMessageReceiverOptions}
+	 *	@returns {Boolean}
+	 *
+	 * 	@typedef CreateOptions {Object}
+	 * 	@property peerId { PeerId | undefined }
+	 * 	@property swarmKey { Uint8Array | undefined }
+	 * 	@property listenAddresses { string[] }
+	 * 	@property announceAddresses { string[] }
+	 * 	@property pubsubDiscoveryEnabled { Boolean }
+	 * 	@property callbackMessageReceiver { CallbackMessageReceiver }
 	 */
 
 	/**
-	 * Create a Libp2p Relay with HOP service
-	 *
-	 * @param {HopRelayOptions} options
-	 * @returns {Promise<Libp2p>}
+	 *	Create a Libp2p Relay with HOP service
+	 *	@param {CreateOptions} options
+	 *	@returns {Promise<Libp2p>}
 	 */
 	async create(
 		{
@@ -54,7 +85,7 @@ export class RelayNodeService
 			listenAddresses = [],
 			announceAddresses = [],
 			pubsubDiscoveryEnabled = true,
-			callbackMessageReceiver = ({ allPeers = [], msgId = null, data = null }) => {}
+			callbackMessageReceiver = ({ allPeers = [], msgId = null, data = null }) => false
 		}
 	)
 	{
@@ -130,6 +161,15 @@ export class RelayNodeService
 				//announce: ['/dns4/auto-relay.libp2p.io/tcp/443/wss/p2p/QmWDn2LY8nannvSWJzruUYoLZ4vV83vfCBwd8DipvdgQc3']
 				announce : announceAddresses,
 			},
+			connectionManager: {
+				maxConnections: 1024,
+				minConnections: 2
+			},
+			// connectionGater: {},
+			// transportManager: {},
+			// datastore: {},
+			// peerStore: {},
+			// keychain: {},
 			transports : [
 				tcp(),
 				webSockets(),
@@ -176,10 +216,7 @@ export class RelayNodeService
 					// 		} = props
 				}),
 			},
-			connectionManager: {
-				maxConnections: 1024,
-				minConnections: 2
-			}
+			connectionProtector : {}
 		};
 		if ( swarmKey )
 		{
@@ -188,8 +225,17 @@ export class RelayNodeService
 			} );
 		}
 
-		const node = await createLibp2p( options );
-		node.addEventListener( 'peer:connect', ( evt ) =>
+		/**
+		 * @typedef NodeServices {object}
+		 * @property relay {import('libp2p/circuit-relay').CircuitRelayService}
+		 * @property identify {import('libp2p/identify').IdentifyService}
+		 * @property pubsub {import('@libp2p/interface/pubsub').PubSub<PubSubEvents>}
+		 */
+		/**
+		 * @type {import('@libp2p/interface').Libp2p<NodeServices>}
+		 */
+		const node = await createLibp2p( /** @type {Libp2pOptions<NodeServices>} */ options );
+		node.addEventListener( 'peer:connect', ( /** @type {{ detail: any; }} */ evt ) =>
 		{
 			try
 			{
@@ -201,7 +247,7 @@ export class RelayNodeService
 				console.error( err );
 			}
 		} );
-		node.addEventListener( 'peer:discovery', ( evt ) =>
+		node.addEventListener( 'peer:discovery', ( /** @type {{ detail: any; }} */ evt ) =>
 		{
 			try
 			{
@@ -226,7 +272,7 @@ export class RelayNodeService
 		//	pub/sub
 		//
 		node.services.pubsub.subscribe( this.syncTopic )
-		node.services.pubsub.addEventListener( 'message', ( evt ) =>
+		node.services.pubsub.addEventListener( 'message', ( /** @type {{ detail: { type: any; topic: any; from: any; }; }} */ evt ) =>
 		{
 			try
 			{

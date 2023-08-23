@@ -12,26 +12,60 @@ import { fromString as uint8ArrayFromString } from "uint8arrays/from-string";
  */
 export class RelayNode
 {
-	relayNodeService = null;
+	/**
+	 * @typedef {import('@libp2p/interface').Libp2p} Libp2p
+	 *
+	 * @typedef {import('@libp2p/interface/peer-id').PeerId} PeerId
+	 * @typedef {import('@libp2p/interface/peer-id').RSAPeerId} RSAPeerId
+	 * @typedef {import('@libp2p/interface/peer-id').Ed25519PeerId} Ed25519PeerId
+	 * @typedef {import('@libp2p/interface/peer-id').Secp256k1PeerId} Secp256k1PeerId
+	 */
+
+
+	/**
+	 *	@type {RelayNodeService}
+	 */
+	relayNodeService;
+
+	/**
+	 *	@type {Libp2p|null}
+	 */
 	relay = null;
+
 
 	constructor()
 	{
 		this.relayNodeService = new RelayNodeService();
 	}
 
+
+
 	/**
 	 * 	@typedef {import('@libp2p/interface-pubsub/src')} PublishResult
 	 */
 
 	/**
-	 *	@param peerIdFilename		{string}
-	 *	@param swarmKeyFilename		{string}
-	 *	@param port			{number}
-	 *	@param announceAddresses	{string[]}
-	 *	@param pubsubDiscoveryEnabled	{boolean}
-	 *	@param subscribedTopics		{string[]}
-	 *	@param callbackMessageReceiver	{({ allPeers : string[], msgId : Uint8Array[], data : any }) => Boolean }
+	 * 	@typedef CallbackMessageReceiverOptions {Object}
+	 * 	@property allPeers {PeerId[]}
+	 * 	@property msgId {Uint8Array[]}
+	 * 	@property data {any}
+	 *
+	 * 	@callback CallbackMessageReceiver
+	 *	@param callbackOptions {CallbackMessageReceiverOptions}
+	 *	@returns {Boolean}
+	 *
+	 *	@typedef CreateNodeOptions {Object}
+	 *	@property peerIdFilename {string}
+	 *	@property swarmKeyFilename {string}
+	 *	@property port {number}
+	 *	@property announceAddresses {string[]}
+	 *	@property pubsubDiscoveryEnabled {boolean}
+	 *	@property subscribedTopics {string[]}
+	 *	@property callbackMessageReceiver {CallbackMessageReceiver}
+	 */
+
+	/**
+	 * 	@param options {CreateNodeOptions}
 	 *	@returns {Promise<{node: *, publish: ( data: object|string ) => Promise<PublishResult>}>}
 	 */
 	async createNode(
@@ -42,7 +76,7 @@ export class RelayNode
 			announceAddresses = [],
 			pubsubDiscoveryEnabled = true,
 			subscribedTopics = [],
-			callbackMessageReceiver = ({ allPeers = [], msgId = null, data = null }) => {}
+			callbackMessageReceiver = ( { allPeers = [], msgId = null, data = null } ) => false
 		}
 	)
 	{
@@ -94,7 +128,10 @@ export class RelayNode
 				const stop = async () =>
 				{
 					LogUtil.say( 'Stopping...' )
-					await this.relay.stop()
+					if ( this.relay )
+					{
+						await this.relay.stop()
+					}
 
 					//metricsServer && await metricsServer.close()
 
@@ -135,7 +172,7 @@ export class RelayNode
 				}
 				else if ( TypeUtil.isString( data ) )
 				{
-					pubData = uint8ArrayFromString( data );
+					pubData = uint8ArrayFromString( String( data ) );
 				}
 				else
 				{
