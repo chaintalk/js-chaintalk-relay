@@ -74,6 +74,7 @@ export class RelayNode
 			swarmKeyFilename = '',
 			port = 9911,
 			announceAddresses = [],
+			bootstrapperAddresses = [],
 			pubsubDiscoveryEnabled = true,
 			subscribedTopics = [],
 			callbackMessageReceiver = ( { allPeers = [], msgId = null, data = null } ) => false
@@ -84,6 +85,11 @@ export class RelayNode
 		{
 			try
 			{
+				if ( port < 1024 || port > 65535 )
+				{
+					return reject( `invalid port` );
+				}
+
 				//	...
 				const peerIdObject = await this.preparePeerId( peerIdFilename );
 				if ( null === peerIdObject )
@@ -113,6 +119,7 @@ export class RelayNode
 					swarmKey : swarmKey,
 					listenAddresses : listenAddresses,
 					announceAddresses : announceAddresses,
+					bootstrapperAddresses : bootstrapperAddresses,
 					pubsubDiscoveryEnabled : Boolean( pubsubDiscoveryEnabled ),
 					callbackMessageReceiver : callbackMessageReceiver,
 				} );
