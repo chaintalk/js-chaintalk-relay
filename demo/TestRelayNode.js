@@ -1,5 +1,5 @@
 import minimist from "minimist";
-import { RelayNode } from "./RelayNode.js";
+import { RelayNode } from "../src/index.js";
 const argv = minimist( process.argv.slice( 2 ) );
 import { toString as uint8ArrayToString } from 'uint8arrays/to-string'
 import { bootstrappers } from "./bootstrappers.js";

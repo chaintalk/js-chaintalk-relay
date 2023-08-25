@@ -1,6 +1,6 @@
 {
 	"name": "chaintalk-relay",
-	"version": "1.0.1",
+	"version": "1.0.2",
 	"description": "ChainTalk Relay Server",
 	"leadMaintainer": "Chain Talk, Team.",
 	"main": "src/index.js",
@@ -9,9 +9,7 @@
 	},
 	"scripts": {
 		"help": "node src/help.js",
-		"dev": "node src/TestRelayNode.js",
-		"clean": "rm -rf dist",
-		"build": "npm run clean && tsc"
+		"demo": "node demo/TestRelayNode.js"
 	},
 	"type": "module",
 	"files": [
