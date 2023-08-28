@@ -1,8 +1,5 @@
-import {
-	LogUtil,
-	PeerIdService, PeerIdStorageService,
-	SwarmKeyService, SwarmKeyStorageService, TypeUtil
-} from 'chaintalk-utils';
+import { LogUtil, TypeUtil } from 'chaintalk-utils';
+import { PeerIdService, PeerIdStorageService, SwarmKeyService, SwarmKeyStorageService } from 'chaintalk-lib';
 import { RelayNodeService } from "./services/RelayNodeService.js";
 import { fromString as uint8ArrayFromString } from "uint8arrays/from-string";
 
