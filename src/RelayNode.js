@@ -63,7 +63,7 @@ export class RelayNode
 
 	/**
 	 * 	@param options {CreateNodeOptions}
-	 *	@returns {Promise<{node: *, publish: ( data: object|string ) => Promise<PublishResult>}>}
+	 *	@returns {Promise<{topic: string, node: *, publish: ( data: object|string ) => Promise<PublishResult>}>}
 	 */
 	async createNode(
 		{
@@ -147,6 +147,7 @@ export class RelayNode
 
 				//	...
 				resolve({
+					topic : this.relayNodeService.syncTopic,
 					node : this.relay,
 					publish : ( data ) => this.publishData( data ),
 				});
@@ -168,15 +169,17 @@ export class RelayNode
 		{
 			try
 			{
-				let pubData	= null;
+				let pubString= '';
+				let pubData= null;
 				if ( TypeUtil.isObject( data ) )
 				{
-					const pubString = JSON.stringify( data );
+					pubString = JSON.stringify( data );
 					pubData = uint8ArrayFromString( pubString );
 				}
 				else if ( TypeUtil.isString( data ) )
 				{
-					pubData = uint8ArrayFromString( String( data ) );
+					pubString = String( data );
+					pubData = uint8ArrayFromString( pubString );
 				}
 				else
 				{
@@ -184,6 +187,9 @@ export class RelayNode
 				}
 
 				const publishResult = await this.relay.services.pubsub.publish( this.relayNodeService.syncTopic, pubData );
+				console.log( `publishResult : ${ pubString }, ${ JSON.stringify( publishResult ) }`,  );
+
+				//	...
 				resolve( publishResult );
 			}
 			catch ( err )

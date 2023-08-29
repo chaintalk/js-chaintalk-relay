@@ -13,8 +13,13 @@ import { pubsubPeerDiscovery } from '@libp2p/pubsub-peer-discovery'
 import { circuitRelayTransport, circuitRelayServer } from 'libp2p/circuit-relay'
 import { identifyService } from 'libp2p/identify'
 
-import { TypeUtil } from 'chaintalk-utils';
+import { TypeUtil, LogUtil } from 'chaintalk-utils';
 import { PeerUtil } from "../utils/PeerUtil.js";
+
+import debug from 'debug';
+const logger = debug( 'RelayNodeService' );
+debug.enable( 'RelayNodeService' );
+debug.enable( 'libp2p:floodsub' );
 
 
 export class RelayNodeService
@@ -127,15 +132,6 @@ export class RelayNodeService
 						//announce: ['/dns4/auto-relay.libp2p.io/tcp/443/wss/p2p/QmWDn2LY8nannvSWJzruUYoLZ4vV83vfCBwd8DipvdgQc3']
 						announce : announceAddresses,
 					},
-					connectionManager: {
-						maxConnections: 1024,
-						minConnections: 2
-					},
-					// connectionGater: {},
-					// transportManager: {},
-					// datastore: {},
-					// peerStore: {},
-					// keychain: {},
 					transports : [
 						tcp(),
 						webSockets(),
@@ -153,7 +149,7 @@ export class RelayNodeService
 						}),
 						//	https://github.com/libp2p/js-libp2p-pubsub-peer-discovery
 						pubsubPeerDiscovery({
-							interval: 1000
+							interval: 200
 						})
 					],
 					services : {
@@ -161,6 +157,13 @@ export class RelayNodeService
 						identify : identifyService(),
 						pubsub: floodsub({
 							enabled: true,
+							canRelayMessage : true,
+
+							//      canRelayMessage = false,
+							//       emitSelf = false,
+							//       messageProcessingConcurrency = 10,
+							//       maxInboundStreams = 1,
+							//       maxOutboundStreams = 1
 
 							//	handle this many incoming pubsub messages concurrently
 							messageProcessingConcurrency: 32,
@@ -175,7 +178,16 @@ export class RelayNodeService
 					connectionProtector : preSharedKey( {
 						//	private network
 						psk : swarmKey
-					})
+					}),
+					connectionManager: {
+						maxConnections: 1024,
+						minConnections: 2
+					},
+					// connectionGater: {},
+					// transportManager: {},
+					// datastore: {},
+					// peerStore: {},
+					// keychain: {},
 				};
 
 				/**
@@ -190,7 +202,10 @@ export class RelayNodeService
 				const node = await createLibp2p( /** @type {Libp2pOptions<NodeServices>} */ options );
 
 				//	...
-				node.addEventListener( 'peer:connect', this.handleNodePeerConnect );
+				node.addEventListener( 'peer:connect', ( /** @type {{ detail: any; }} */ evt ) =>
+				{
+					this.handleNodePeerConnect( evt );
+				} );
 				node.addEventListener( 'peer:discovery', ( /** @type {{ detail: any; }} */ evt ) =>
 				{
 					this.handleNodePeerDiscovery( node, evt );
@@ -199,14 +214,14 @@ export class RelayNodeService
 				//
 				//	pub/sub
 				//
-				node.services.pubsub.addEventListener( 'message', ( /** @type {{ detail: { type: any; topic: any; from: any; }; }} */ evt ) =>
+				await node.services.pubsub.subscribe( this.syncTopic );
+				await node.services.pubsub.addEventListener( 'message', ( /** @type {{ detail: { type: any; topic: any; from: any; }; }} */ evt ) =>
 				{
 					this.handleNodePeerMessage( node, callbackMessageReceiver, evt );
 				});
-				node.services.pubsub.subscribe( this.syncTopic );
 
 				//	...
-				resolve( node );
+				setTimeout( () => resolve( node ), 200 );
 			}
 			catch ( err )
 			{
@@ -252,7 +267,7 @@ export class RelayNodeService
 		}
 		catch ( err )
 		{
-			console.error( err );
+			LogUtil.error( err );
 		}
 	}
 
@@ -323,82 +338,86 @@ export class RelayNodeService
 
 			const recType = evt.detail.type;
 			const recTopic = evt.detail.topic;
-			//const recFrom = evt.detail.from;
-			//const recSequence = evt.detail.sequenceNumber;
+			const recFrom = evt.detail.from;
+			const recSequence = evt.detail.sequenceNumber;
 			//const recData = uint8ArrayToString( evt.detail.data );
 
 			if ( 'signed' !== recType )
-		{
-			return false;
-		}
-		if ( '_peer-discovery._p2p._pubsub' === recTopic )
-		{
-			//console.log( `<.> HEARTBEAT[${ recSequence }] from ${ recFrom }` );
-			return false;
-		}
-		if ( this.syncTopic !== recTopic )
-		{
-			//console.log( `- receivedIrrelevant topics are received and discarded voluntarily` );
-			return false;
-		}
+			{
+				LogUtil.warn( `error in handleNodePeerMessage : not signed` );
+				return false;
+			}
+			if ( '_peer-discovery._p2p._pubsub' === recTopic )
+			{
+				//LogUtil.info( `<.> HEARTBEAT[${ recSequence }] from ${ recFrom }` );
+				return false;
+			}
 
-		//	...
-		//const allSubscribers = node.services.pubsub.getSubscribers( this.syncTopic );
-		//const allTopics = node.services.pubsub.getTopics();
-		const allPeers = node.services.pubsub.getPeers();
-		//console.log( `allSubscribers : `, allSubscribers );
-		//console.log( `allTopics : `, allTopics );
-		//console.log( `allPeers : `, allPeers );
+			console.log( `|||||||||||||||||||| Received a message ||||||||||||||||||||` );
+			if ( this.syncTopic !== recTopic )
+			{
+				LogUtil.warn( `-[.] received irrelevant topics` );
+				return false;
+			}
 
-		//
-		//	Validates the given message. The signature will be checked for authenticity.
-		//	Throws an error on invalid messages
-		//
-		try
-		{
-			node.services.pubsub.validate( evt.detail.from, evt.detail );
-		}
-		catch ( errValidate )
-		{
-			console.error( errValidate );
-			return;
-		}
+			//	...
+			//const allSubscribers = node.services.pubsub.getSubscribers( this.syncTopic );
+			// console.log( `allSubscribers : `, allSubscribers );
+			//const allTopics = node.services.pubsub.getTopics();
+			//console.log( `allTopics : `, allTopics );
+			const allPeers = node.services.pubsub.getPeers();
+			// console.log( `allPeers : `, allPeers );
 
-		//		getMsgId( msg : Message ) : Promise<Uint8Array> | Uint8Array
-		const msgIdUInt8Arr = node.services.pubsub.getMsgId( evt.detail );
-		// if ( msgIdUInt8Arr instanceof Uint8Array )
-		// {
-		// 	const msgId = uint8ArrayToString( msgIdUInt8Arr );
-		// 	console.log( `msgId : ${ msgIdUInt8Arr }` );
-		// }
+			//
+			//	Validates the given message. The signature will be checked for authenticity.
+			//	Throws an error on invalid messages
+			//
+			// try
+			// {
+			// 	node.services.pubsub.validate( evt.detail.from, evt.detail );
+			// }
+			// catch ( errValidate )
+			// {
+			// 	console.error( errValidate );
+			// 	return false;
+			// }
 
-		if ( TypeUtil.isFunction( callbackMessageReceiver ) )
-		{
-			callbackMessageReceiver({
-				allPeers : allPeers,
-				msgId : msgIdUInt8Arr,
-				data : evt.detail,
-			});
-		}
+			//		getMsgId( msg : Message ) : Promise<Uint8Array> | Uint8Array
+			const msgIdUInt8Arr = node.services.pubsub.getMsgId( evt.detail );
+			// if ( msgIdUInt8Arr instanceof Uint8Array )
+			// {
+			// 	const msgId = uint8ArrayToString( msgIdUInt8Arr );
+			// 	console.log( `msgId : ${ msgIdUInt8Arr }` );
+			// }
 
-		//
-		//	....
-		//
+			console.log( `will call callbackMessageReceiver` );
+			if ( TypeUtil.isFunction( callbackMessageReceiver ) )
+			{
+				callbackMessageReceiver({
+					allPeers : allPeers,
+					msgId : msgIdUInt8Arr,
+					data : evt.detail,
+				});
+			}
 
-		// let recObject	= null;
-		// if ( 'string' === typeof recData )
-		// {
-		// 	recObject = JSON.parse( recData.trim() );
-		// }
-		// const signature = uint8ArrayToString( evt.detail.signature );
-		// console.log( `received [${ recSequence }] \n- from: ${ recFrom }\n- type: ${ recType }\n- topic ${ recTopic }` );
-		// console.log( `- data: ${ recData }` );
-		// //console.log( `- signature: ${ signature }` );
-		// console.log( `\n` );
+			//
+			//	....
+			//
+
+			// let recObject	= null;
+			// if ( 'string' === typeof recData )
+			// {
+			// 	recObject = JSON.parse( recData.trim() );
+			// }
+			// const signature = uint8ArrayToString( evt.detail.signature );
+			// console.log( `received [${ recSequence }] \n- from: ${ recFrom }\n- type: ${ recType }\n- topic ${ recTopic }` );
+			// console.log( `- data: ${ recData }` );
+			// //console.log( `- signature: ${ signature }` );
+			// console.log( `\n` );
 		}
 		catch ( err )
 		{
-			console.error( err );
+			LogUtil.error( err );
 		}
 	}
 
