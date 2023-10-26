@@ -1,12 +1,18 @@
 import minimist from "minimist";
-import { RelayNode } from "../src/index.js";
+import { SwarmRelay } from "../src/index.js";
 const argv = minimist( process.argv.slice( 2 ) );
 import { toString as uint8ArrayToString } from 'uint8arrays/to-string'
 import { bootstrappers } from "./bootstrappers.js";
 import chalk from "chalk";
 
+/**
+ *	@type {SwarmRelay}
+ */
+const relayNodeWrap = new SwarmRelay();
+let relayNode = null;
 
-async function testRelayNode()
+
+async function testRelayPublisherNode()
 {
 	const port = argv.port || process.env.PORT || undefined;
 	const peerIdFilename = argv.peerId || process.env.PEER_ID || undefined;
@@ -38,20 +44,19 @@ async function testRelayNode()
 			console.error( err );
 		}
 	};
-	const relay = await new RelayNode().createNode({
+	relayNode = await relayNodeWrap.createNode({
 		peerIdFilename : peerIdFilename,
 		swarmKeyFilename : swarmKeyFilename,
 		port : port,
 		announceAddresses : [],
 		bootstrapperAddresses : bootstrappers,
 		pubsubDiscoveryEnabled : true,
-		subscribedTopics : [],
 		callbackMessageReceiver : callbackMessageReceiver
 	});
-	await relay.node.services.pubsub.subscribe( relay.topic );
+	await relayNode.node.services.pubsub.subscribe( relayNode.topic );
 	setInterval(() =>
 	{
-		const allPeers = relay.node.services.pubsub.getPeers();
+		const allPeers = relayNode.node.services.pubsub.getPeers();
 		if ( Array.isArray( allPeers ) && allPeers.length > 0 )
 		{
 			console.log( `${ chalk.bgGreen( ')))))))))) )))))))))) allPeers' ) } : `, allPeers );
@@ -61,7 +66,7 @@ async function testRelayNode()
 			console.log( `${ chalk.bgRed( ')))))))))) )))))))))) allPeers' ) } : `, allPeers );
 		}
 
-		const allSubscribers = relay.node.services.pubsub.getSubscribers( relay.topic );
+		const allSubscribers = relayNode.node.services.pubsub.getSubscribers( relayNode.topic );
 		if ( Array.isArray( allSubscribers ) && allSubscribers.length > 0 )
 		{
 			console.log( `${ chalk.bgGreen( ')))))))))) )))))))))) allSubscribers' ) } : `, allSubscribers );
@@ -71,7 +76,7 @@ async function testRelayNode()
 			console.log( `${ chalk.bgRed( ')))))))))) )))))))))) allSubscribers' ) } : `, allSubscribers );
 		}
 
-		const allTopics = relay.node.services.pubsub.getTopics();
+		const allTopics = relayNode.node.services.pubsub.getTopics();
 		if ( Array.isArray( allTopics ) && allTopics.length > 0 )
 		{
 			console.log( `${ chalk.bgGreen( ')))))))))) )))))))))) allTopics' ) } : `, allTopics );
@@ -84,7 +89,7 @@ async function testRelayNode()
 		const datetime = new Date().toISOString();
 		console.log( `[${ datetime }] publish a data` );
 		const pubObject = {
-			peerId : relay.node.peerId.toString(),
+			peerId : relayNode.node.peerId.toString(),
 			datetime : datetime,
 			message : 'hello world!',
 		};
@@ -92,7 +97,7 @@ async function testRelayNode()
 		// const pubString = JSON.stringify( pubObject );
 		// const pubData = uint8ArrayFromString( pubString );
 		// //	async publish (topic: string, data?: Uint8Array): Promise<PublishResult>
-		relay.publish( pubObject )
+		relayNode.publish( pubObject )
 			.then( ( result ) => {
 			})
 			.catch( err => {
@@ -101,4 +106,4 @@ async function testRelayNode()
 	}, 3e3 );
 }
 
-testRelayNode().then();
+testRelayPublisherNode().then();

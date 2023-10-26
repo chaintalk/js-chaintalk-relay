@@ -1,13 +1,15 @@
 import { LogUtil, TypeUtil } from 'chaintalk-utils';
 import { PeerIdService, PeerIdStorageService, SwarmKeyService, SwarmKeyStorageService } from 'chaintalk-lib';
-import { RelayNodeService } from "./services/RelayNodeService.js";
+import { RelayNodeService } from "./RelayNodeService.js";
 import { fromString as uint8ArrayFromString } from "uint8arrays/from-string";
+import chalk from "chalk";
+import { PeerUtil } from "../utils/PeerUtil.js";
 
 
 /**
- *	class Relay
+ *	class SwarmRelay
  */
-export class RelayNode
+export class SwarmRelay
 {
 	/**
 	 * @typedef {import('@libp2p/interface').Libp2p} Libp2p
@@ -22,7 +24,7 @@ export class RelayNode
 	/**
 	 *	@type {RelayNodeService}
 	 */
-	relayNodeService;
+	relayNodeService = null;
 
 	/**
 	 *	@type {Libp2p|null}
@@ -32,6 +34,12 @@ export class RelayNode
 
 	constructor()
 	{
+		if ( this.relay || this.relayNodeService )
+		{
+			throw new Error( `SwarmRelay already created` );
+		}
+
+		//	...
 		this.relayNodeService = new RelayNodeService();
 	}
 
@@ -62,6 +70,7 @@ export class RelayNode
 	 */
 
 	/**
+	 * 	@public
 	 * 	@param options {CreateNodeOptions}
 	 *	@returns {Promise<{topic: string, node: *, publish: ( data: object|string ) => Promise<PublishResult>}>}
 	 */
@@ -73,7 +82,6 @@ export class RelayNode
 			announceAddresses = [],
 			bootstrapperAddresses = [],
 			pubsubDiscoveryEnabled = true,
-			subscribedTopics = [],
 			callbackMessageReceiver = ( { allPeers = [], msgId = null, data = null } ) => false
 		}
 	)
@@ -101,9 +109,8 @@ export class RelayNode
 					return reject( `invalid swarm key. Create a new swarm key using [chaintalk-utils]` );
 				}
 
-				//	...
 				//	multiaddrs
-				const listenAddresses	= this.getListenAddresses( port );
+				const listenAddresses	= PeerUtil.getListenAddresses( port );
 				LogUtil.say( `listenAddresses: ${ listenAddresses.map( ( a ) => a ) }` )
 				if ( Array.isArray( announceAddresses ) && announceAddresses.length > 0 )
 				{
@@ -123,31 +130,19 @@ export class RelayNode
 				await this.relay.start();
 
 				//	...
-				LogUtil.say( 'Bootstrap Relay Server listening on:' );
+				LogUtil.say( 'Relay Server listening on:' );
 				const multiaddrs = this.relay.getMultiaddrs();
 				multiaddrs.forEach( ( ma ) => {
 					LogUtil.say( `${ ma.toString() }` );
 				} );
 
-				const stop = async () =>
-				{
-					LogUtil.say( 'Stopping...' )
-					if ( this.relay )
-					{
-						await this.relay.stop()
-					}
-
-					//metricsServer && await metricsServer.close()
-
-					process.exit( 0 )
-				}
-
-				process.on( 'SIGTERM', stop );
-				process.on( 'SIGINT', stop );
+				//	setup stop
+				process.on( 'SIGTERM', this.stop );
+				process.on( 'SIGINT', this.stop );
 
 				//	...
 				resolve({
-					topic : this.relayNodeService.syncTopic,
+					topic : this.relayNodeService.getSyncTopic(),
 					node : this.relay,
 					publish : ( data ) => this.publishData( data ),
 				});
@@ -157,6 +152,21 @@ export class RelayNode
 				reject( err );
 			}
 		});
+	}
+
+	/**
+	 *	@return {Promise<void>}
+	 */
+	async stop()
+	{
+		LogUtil.say( 'Stopping...' )
+		if ( this.relay )
+		{
+			await this.relay.stop()
+		}
+
+		//metricsServer && await metricsServer.close()
+		process.exit( 0 );
 	}
 
 	/**
@@ -186,8 +196,16 @@ export class RelayNode
 					return reject( `invalid data` );
 				}
 
-				const publishResult = await this.relay.services.pubsub.publish( this.relayNodeService.syncTopic, pubData );
-				console.log( `publishResult : ${ pubString }, ${ JSON.stringify( publishResult ) }`,  );
+				const publishResult = await this.relay.services.pubsub.publish( this.relayNodeService.getSyncTopic(), pubData );
+
+				if ( Array.isArray( publishResult ) && publishResult.length > 0 )
+				{
+					console.log( `|||||||| publishResult : ${ pubString }, ${ JSON.stringify( publishResult ) }`,  );
+				}
+				else
+				{
+					console.log( `${ chalk.bgGreen( '|||||||| publishResult' ) } : ${ pubString }, ${ JSON.stringify( publishResult ) }`,  );
+				}
 
 				//	...
 				resolve( publishResult );
@@ -258,30 +276,5 @@ export class RelayNode
 		}
 
 		return swarmKey;
-	}
-
-	/**
-	 *	@param port	{number} port number
-	 *	@returns {string[]}
-	 */
-	getListenAddresses( port )
-	{
-		port = port || 9911;
-		//let listenAddresses = [ '/ip4/127.0.0.1/tcp/10010/ws', '/ip4/127.0.0.1/tcp/10000' ]
-		// let listenAddresses = [ '/ip4/0.0.0.0/tcp/10000/ws' ]
-		// const argvAddr = argv.listenMultiaddrs || argv.lm
-		//
-		// if ( argvAddr )
-		// {
-		// 	listenAddresses = [ argvAddr ]
-		//
-		// 	const extraParams = this.getExtraParams( '--listenMultiaddrs', '--lm' )
-		// 	extraParams.forEach( ( p ) => listenAddresses.push( p ) )
-		// }
-		// else if ( process.env.LISTEN_MULTIADDRS )
-		// {
-		// 	listenAddresses = process.env.LISTEN_MULTIADDRS.split( ',' )
-		// }
-		return [ `/ip4/0.0.0.0/tcp/${ port }/ws` ];
 	}
 }

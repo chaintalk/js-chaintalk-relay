@@ -8,7 +8,8 @@ import { tcp } from '@libp2p/tcp';
 import { webSockets } from '@libp2p/websockets';
 import { bootstrap } from '@libp2p/bootstrap'
 //import { verifySignature } from '@libp2p/pubsub';
-import { floodsub } from '@libp2p/floodsub'
+import { gossipsub } from '@chainsafe/libp2p-gossipsub'
+//import { floodsub } from '@libp2p/floodsub'
 import { pubsubPeerDiscovery } from '@libp2p/pubsub-peer-discovery'
 import { circuitRelayTransport, circuitRelayServer } from 'libp2p/circuit-relay'
 import { identifyService } from 'libp2p/identify'
@@ -16,10 +17,12 @@ import { identifyService } from 'libp2p/identify'
 import { TypeUtil, LogUtil } from 'chaintalk-utils';
 import { PeerUtil } from "../utils/PeerUtil.js";
 
-import debug from 'debug';
-const logger = debug( 'RelayNodeService' );
-debug.enable( 'RelayNodeService' );
-debug.enable( 'libp2p:floodsub' );
+import { logger, enable } from "@libp2p/logger";
+enable( 'libp2p:floodsub' );
+
+const log = logger( 'chaintalk:RelayNodeService' )
+enable( 'chaintalk:RelayNodeService' );
+
 
 
 export class RelayNodeService
@@ -50,13 +53,34 @@ export class RelayNodeService
 
 
 	/**
+	 *	@type {Libp2p}
+	 */
+	static node = null;
+
+
+	constructor()
+	{
+		if ( this.node )
+		{
+			throw new Error( `RelayNodeService already created` );
+		}
+	}
+
+	/**
 	 *	@returns {string}
 	 */
-	get syncTopic()
+	getSyncTopic()
 	{
 		return 'peer-message-sync';
 	}
 
+	/**
+	 *	@return {Libp2p}
+	 */
+	getNode()
+	{
+		return this.node;
+	}
 
 
 	/**
@@ -125,17 +149,17 @@ export class RelayNodeService
 				//	@libp2p/pubsub-peer-discovery
 				//	export declare const TOPIC = "_peer-discovery._p2p._pubsub";
 				//
-				let options = {
+				const options = {
 					peerId: peerId,
 					addresses : {
 						listen : listenAddresses,
 						//announce: ['/dns4/auto-relay.libp2p.io/tcp/443/wss/p2p/QmWDn2LY8nannvSWJzruUYoLZ4vV83vfCBwd8DipvdgQc3']
-						announce : announceAddresses,
+						//announce : announceAddresses,
 					},
 					transports : [
 						tcp(),
-						webSockets(),
-						circuitRelayTransport()
+						// webSockets(),
+						// circuitRelayTransport()
 					],
 					streamMuxers : [
 						yamux(), mplex()
@@ -149,30 +173,34 @@ export class RelayNodeService
 						}),
 						//	https://github.com/libp2p/js-libp2p-pubsub-peer-discovery
 						pubsubPeerDiscovery({
-							interval: 200
+							interval: 1000
 						})
 					],
 					services : {
-						relay : circuitRelayServer(),
+						// relay : circuitRelayServer(),
 						identify : identifyService(),
-						pubsub: floodsub({
-							enabled: true,
-							canRelayMessage : true,
+						pubsub: gossipsub({
+							//	https://github.com/ChainSafe/js-libp2p-gossipsub
+							emitSelf : true,
+							gossipIncoming : true,
 
-							//      canRelayMessage = false,
-							//       emitSelf = false,
-							//       messageProcessingConcurrency = 10,
-							//       maxInboundStreams = 1,
-							//       maxOutboundStreams = 1
+							//	boolean identifying whether the node should fall back to the floodsub protocol,
+							//	if another connecting peer does not support gossipsub (defaults to true).
+							fallbackToFloodsub : true,
 
-							//	handle this many incoming pubsub messages concurrently
-							messageProcessingConcurrency: 32,
+							//	boolean identifying if self-published messages should be sent to all peers, (defaults to true).
+							floodPublish : true,
 
-							//	How many parallel incoming streams to allow on the pubsub protocol per-connection
-							maxInboundStreams: 32,
+							//	boolean identifying whether PX is enabled;
+							//	this should be enabled in bootstrappers and other
+							//	well-connected/trusted nodes (defaults to false).
+							doPX : true,
 
-							//	How many parallel outgoing streams to allow on the pubsub protocol per-connection
-							maxOutboundStreams: 32,
+							//	boolean identifying if we want to sign outgoing messages or not (default: true)
+							signMessages : true,
+
+							//	boolean identifying if message signing is required for incoming messages or not (default: true)
+							strictSigning : true,
 						}),
 					},
 					connectionProtector : preSharedKey( {
@@ -199,29 +227,33 @@ export class RelayNodeService
 				/**
 				 * @type {import('@libp2p/interface').Libp2p<NodeServices>}
 				 */
-				const node = await createLibp2p( /** @type {Libp2pOptions<NodeServices>} */ options );
+				this.node = await createLibp2p( /** @type {Libp2pOptions<NodeServices>} */ options );
 
 				//	...
-				node.addEventListener( 'peer:connect', ( /** @type {{ detail: any; }} */ evt ) =>
+				this.node.addEventListener( 'peer:connect',  ( /** @type {{ detail: any; }} */ evt ) =>
 				{
 					this.handleNodePeerConnect( evt );
-				} );
-				node.addEventListener( 'peer:discovery', ( /** @type {{ detail: any; }} */ evt ) =>
+				});
+				this.node.addEventListener( 'peer:discovery', ( /** @type {{ detail: any; }} */ evt ) =>
 				{
-					this.handleNodePeerDiscovery( node, evt );
-				} );
+					this.handleNodePeerDiscovery( evt );
+				});
+				this.node.addEventListener('self:peer:update', ( /** @type {{ detail: any; }} */ evt ) =>
+				{
+					this.handleNodeSelfPeerUpdate( evt );
+				});
 
 				//
 				//	pub/sub
 				//
-				await node.services.pubsub.subscribe( this.syncTopic );
-				await node.services.pubsub.addEventListener( 'message', ( /** @type {{ detail: { type: any; topic: any; from: any; }; }} */ evt ) =>
+				this.node.services.pubsub.subscribe( this.getSyncTopic() );
+				this.node.services.pubsub.addEventListener( 'message', ( /** @type {{ detail: { type: any; topic: any; from: any; }; }} */ evt ) =>
 				{
-					this.handleNodePeerMessage( node, callbackMessageReceiver, evt );
+					this.handleNodePeerMessage( this.node, callbackMessageReceiver, evt );
 				});
 
 				//	...
-				setTimeout( () => resolve( node ), 200 );
+				resolve( this.node );
 			}
 			catch ( err )
 			{
@@ -230,28 +262,53 @@ export class RelayNodeService
 		});
 	}
 
+
 	/**
-	 * @param evt
+	 *	@param evt
+	 *	@return {boolean}
 	 */
 	handleNodePeerConnect( /** @type {{ detail: any; }} */ evt )
 	{
+		if ( ! this.node )
+		{
+			log( `handleNodePeerConnect : node is not initialized` );
+			return false;
+		}
+		if ( ! evt )
+		{
+			log( `handleNodePeerConnect : undefined evt` );
+			return false;
+		}
+
 		try
 		{
 			const peerId = evt.detail;
-			console.log( 'Connection established to:', peerId.toString() ) // Emitted when a peer has been found
+			log( 'Connection established to: %s', peerId.toString() ) // Emitted when a peer has been found
 		}
 		catch ( err )
 		{
-			console.error( err );
+			log( 'exception in handleNodePeerConnect: %O', err );
 		}
 	}
 
+
 	/**
-	 * @param node
-	 * @param evt
+	 *	@param evt
+	 *	@return {boolean}
 	 */
-	handleNodePeerDiscovery( node, /** @type {{ detail: any; }} */ evt )
+	handleNodePeerDiscovery( /** @type {{ detail: any; }} */ evt )
 	{
+		if ( ! this.node )
+		{
+			log( `handleNodePeerDiscovery : node is not initialized` );
+			return false;
+		}
+		if ( ! evt )
+		{
+			log( `handleNodePeerDiscovery : undefined evt` );
+			return false;
+		}
+
 		try
 		{
 			const peerInfo = evt.detail;
@@ -263,19 +320,40 @@ export class RelayNodeService
 			//	Notifies the router that a peer has been connected
 			//		addPeer( peerId : PeerId, protocol : string ) : PeerStreams
 			//
-			const newPeerStreams = node.services.pubsub.addPeer( peerInfo.id, 'ws' );
+		//	const newPeerStreams = this.node.services.pubsub.addPeer( peerInfo.id, 'ws' );
 		}
 		catch ( err )
 		{
-			LogUtil.error( err );
+			log( 'exception in handleNodePeerDiscovery: %O', err );
 		}
 	}
 
 	/**
-	 * @param node
-	 * @param callbackMessageReceiver
-	 * @param evt
-	 * @return {boolean}
+	 *	@param evt
+	 *	@return {boolean}
+	 */
+	handleNodeSelfPeerUpdate( /** @type {{ detail: any; }} */ evt )
+	{
+		if ( ! this.node )
+		{
+			log( `handleNodeSelfPeerUpdate : node is not initialized` );
+			return false;
+		}
+		if ( ! evt )
+		{
+			log( `handleNodeSelfPeerUpdate : undefined evt` );
+			return false;
+		}
+
+		//	Updated self multiaddrs?
+		console.log( `Advertising with a relay address of ${ this.node.getMultiaddrs()[0].toString() }` );
+	}
+
+	/**
+	 *	@param node
+	 *	@param callbackMessageReceiver
+	 *	@param evt
+	 *	@return {boolean}
 	 */
 	handleNodePeerMessage
 	(
@@ -284,6 +362,12 @@ export class RelayNodeService
 		/** @type {{ detail: { type: any; topic: any; from: any; }; }} */ evt
 	)
 	{
+		if ( ! this.node )
+		{
+			log( `handleNodePeerMessage : node is not initialized` );
+			return false;
+		}
+
 		try
 		{
 			//
@@ -354,18 +438,18 @@ export class RelayNodeService
 			}
 
 			console.log( `|||||||||||||||||||| Received a message ||||||||||||||||||||` );
-			if ( this.syncTopic !== recTopic )
+			if ( this.getSyncTopic() !== recTopic )
 			{
 				LogUtil.warn( `-[.] received irrelevant topics` );
 				return false;
 			}
 
 			//	...
-			//const allSubscribers = node.services.pubsub.getSubscribers( this.syncTopic );
+			//const allSubscribers = node.services.pubsub.getSubscribers( this.getSyncTopic() );
 			// console.log( `allSubscribers : `, allSubscribers );
 			//const allTopics = node.services.pubsub.getTopics();
 			//console.log( `allTopics : `, allTopics );
-			const allPeers = node.services.pubsub.getPeers();
+			const allPeers = this.node.services.pubsub.getPeers();
 			// console.log( `allPeers : `, allPeers );
 
 			//
@@ -383,7 +467,7 @@ export class RelayNodeService
 			// }
 
 			//		getMsgId( msg : Message ) : Promise<Uint8Array> | Uint8Array
-			const msgIdUInt8Arr = node.services.pubsub.getMsgId( evt.detail );
+			//const msgIdUInt8Arr = this.node.services.pubsub.getMsgId( evt.detail );
 			// if ( msgIdUInt8Arr instanceof Uint8Array )
 			// {
 			// 	const msgId = uint8ArrayToString( msgIdUInt8Arr );
@@ -395,7 +479,7 @@ export class RelayNodeService
 			{
 				callbackMessageReceiver({
 					allPeers : allPeers,
-					msgId : msgIdUInt8Arr,
+					msgId : undefined,	//	msgIdUInt8Arr
 					data : evt.detail,
 				});
 			}
@@ -417,7 +501,7 @@ export class RelayNodeService
 		}
 		catch ( err )
 		{
-			LogUtil.error( err );
+			log( 'exception in handleNodePeerMessage: %O', err );
 		}
 	}
 

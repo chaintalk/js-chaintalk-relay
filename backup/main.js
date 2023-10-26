@@ -6,6 +6,7 @@ import { RelayNodeService } from '../src/services/RelayNodeService.js';
 import { PeerIdService, PeerIdStorageService, SwarmKeyStorageService } from "chaintalk-utils";
 import { LogUtil } from "chaintalk-utils";
 import { SwarmKeyService } from "chaintalk-utils";
+import { PeerUtil } from "../src/utils/PeerUtil.js";
 
 const argv = minimist( process.argv.slice( 2 ) );
 
@@ -37,8 +38,8 @@ async function main()
 
 	//	...
 	//	multiaddrs
-	const listenAddresses	= CommonUtil.getListenAddresses( argv );
-	const announceAddresses	= CommonUtil.getAnnounceAddresses( argv )
+	const listenAddresses	= PeerUtil.getListenAddresses( argv );
+	const announceAddresses	= PeerUtil.getAnnounceAddresses( argv )
 
 	LogUtil.say( `listenAddresses: ${ listenAddresses.map( ( a ) => a ) }` )
 	announceAddresses.length && LogUtil.say( `announceAddresses: ${ announceAddresses.map( ( a ) => a ) }` )
@@ -49,7 +50,8 @@ async function main()
 	)
 
 	//	Create Relay
-	const relay = await RelayNodeService.create( {
+	const relayNodeService = new RelayNodeService();
+	const relay = await relayNodeService.create( {
 		peerId : peerIdObject,
 		swarmKey : swarmKey,
 		listenAddresses : listenAddresses,
