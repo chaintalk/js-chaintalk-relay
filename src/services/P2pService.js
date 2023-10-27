@@ -5,13 +5,13 @@ import { noise } from '@chainsafe/libp2p-noise'
 import { yamux } from '@chainsafe/libp2p-yamux'
 import { mplex } from '@libp2p/mplex'
 import { tcp } from '@libp2p/tcp';
-import { webSockets } from '@libp2p/websockets';
+//import { webSockets } from '@libp2p/websockets';
 import { bootstrap } from '@libp2p/bootstrap'
 //import { verifySignature } from '@libp2p/pubsub';
 import { gossipsub } from '@chainsafe/libp2p-gossipsub'
 //import { floodsub } from '@libp2p/floodsub'
 import { pubsubPeerDiscovery } from '@libp2p/pubsub-peer-discovery'
-import { circuitRelayTransport, circuitRelayServer } from 'libp2p/circuit-relay'
+//import { circuitRelayTransport, circuitRelayServer } from 'libp2p/circuit-relay'
 import { identifyService } from 'libp2p/identify'
 
 import { TypeUtil, LogUtil } from 'chaintalk-utils';

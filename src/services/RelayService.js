@@ -3,7 +3,6 @@ import { P2pService } from "./P2pService.js";
 import { fromString as uint8ArrayFromString } from "uint8arrays/from-string";
 import { PeerUtil } from "../utils/PeerUtil.js";
 import { PrepareUtil } from "../utils/PrepareUtil.js";
-import { toString as uint8ArrayToString } from "uint8arrays/to-string";
 import { enable, logger } from "@libp2p/logger";
 import _ from 'lodash';
 

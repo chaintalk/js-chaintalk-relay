@@ -56,8 +56,8 @@ export class PrepareUtil
 			{
 				const swarmKeyStorageService = new SwarmKeyStorageService();
 				const filename = swarmKeyStorageService.getSafeFilename( swarmKeyFilename );
-				let swarmKey	= null;
-				let swarmKeyObject	= null;
+				let swarmKey;
+				let swarmKeyObject;
 
 				swarmKey = await SwarmKeyService.loadSwarmKey( filename );
 				swarmKeyObject = swarmKeyStorageService.swarmKeyToObject( swarmKey );

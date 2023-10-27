@@ -1,7 +1,6 @@
 import minimist from "minimist";
 import { RelayService } from "../src/index.js";
 import { bootstrappers } from "./bootstrappers.js";
-import chalk from "chalk";
 import { CreateRelayOptionsBuilder } from "../src/models/CreateRelayOptionsBuilder.js";
 
 const argv = minimist( process.argv.slice( 2 ) );
