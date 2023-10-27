@@ -32,7 +32,7 @@ async function publisher()
 	relayNode = await relayService.createRelay( createRelayOptions );
 	await relayService.subscribe( syncTopic, ( param ) =>
 	{
-		console.log( `relayService.subscribe received message :`, param );
+	//	console.log( `relayService.subscribe received message :`, param );
 	} );
 
 	setInterval(async () =>
