@@ -6,8 +6,8 @@
 	"main": "src/index.js",
 	"scripts": {
 		"help": "node src/help.js",
-		"subscriber": "node examples/subscriber.js",
-		"publisher": "node examples/publisher.js"
+		"subscriber": "node examples/pubsub/Subscriber.js",
+		"publisher": "node examples/pubsub/Publisher.js"
 	},
 	"type": "module",
 	"files": [

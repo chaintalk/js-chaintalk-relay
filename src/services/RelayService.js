@@ -192,7 +192,7 @@ export class RelayService
 	/**
 	 *	@param topic	{string}
 	 *	@param callback	{CallbackMessage}
-	 *	@returns {Promise<PublishResult>}
+	 *	@returns {Promise<boolean>}
 	 */
 	async subscribe( topic, callback )
 	{
