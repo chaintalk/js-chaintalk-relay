@@ -98,41 +98,36 @@ export class P2pService
 
 	/**
 	 *	Create a Libp2p Relay with HOP service
-	 *	@param {CreateOptions} options
+	 *	@param createP2pOptions	{CreateOptions}
 	 *	@returns {Promise<Libp2p>}
 	 */
-	async createP2pNode(
-		{
-			peerId = undefined,
-			swarmKey = undefined,
-			listenAddresses = [],
-			announceAddresses = [],
-			bootstrapperAddresses = [],
-			callbackMessage = () => false
-		}
-	)
+	async createP2pNode( createP2pOptions )
 	{
 		return new Promise( async ( resolve, reject ) =>
 		{
 			try
 			{
-				if ( ! PeerUtil.isValidPeerId( peerId ) )
+				if ( ! createP2pOptions )
+				{
+					return reject( `invalid createP2pOptions` );
+				}
+				if ( ! PeerUtil.isValidPeerId( createP2pOptions.peerId ) )
 				{
 					return reject( `invalid peerId` );
 				}
-				if ( ! swarmKey )
+				if ( ! createP2pOptions.swarmKey )
 				{
 					return reject( `invalid swarmKey` );
 				}
-				if ( ! Array.isArray( listenAddresses ) || 0 === listenAddresses.length )
+				if ( ! Array.isArray( createP2pOptions.listenAddresses ) || 0 === createP2pOptions.listenAddresses.length )
 				{
 					return reject( `invalid listenAddresses` );
 				}
-				if ( ! Array.isArray( announceAddresses ) )
+				if ( ! Array.isArray( createP2pOptions.announceAddresses ) )
 				{
 					return reject( `invalid announceAddresses` );
 				}
-				if ( ! Array.isArray( bootstrapperAddresses ) || 0 === bootstrapperAddresses.length )
+				if ( ! Array.isArray( createP2pOptions.bootstrapperAddresses ) || 0 === createP2pOptions.bootstrapperAddresses.length )
 				{
 					return reject( `invalid bootstrapperAddresses` );
 				}
@@ -142,9 +137,9 @@ export class P2pService
 				//	export declare const TOPIC = "_peer-discovery._p2p._pubsub";
 				//
 				const options = {
-					peerId: peerId,
+					peerId: createP2pOptions.peerId,
 					addresses : {
-						listen : listenAddresses,
+						listen : createP2pOptions.listenAddresses,
 						//announce: ['/dns4/auto-relay.libp2p.io/tcp/443/wss/p2p/QmWDn2LY8nannvSWJzruUYoLZ4vV83vfCBwd8DipvdgQc3']
 						//announce : announceAddresses,
 					},
@@ -161,7 +156,7 @@ export class P2pService
 					],
 					peerDiscovery: [
 						bootstrap({
-							list: bootstrapperAddresses
+							list: createP2pOptions.bootstrapperAddresses
 						}),
 						//	https://github.com/libp2p/js-libp2p-pubsub-peer-discovery
 						pubsubPeerDiscovery({
@@ -197,7 +192,7 @@ export class P2pService
 					},
 					connectionProtector : preSharedKey( {
 						//	private network
-						psk : swarmKey
+						psk : createP2pOptions.swarmKey
 					}),
 					connectionManager: {
 						maxConnections: 1024,
@@ -241,7 +236,7 @@ export class P2pService
 				//this.node.services.pubsub.subscribe( this.getSyncTopic() );
 				this.node.services.pubsub.addEventListener( 'message', ( /** @type {{ detail: { type: any; topic: any; from: any; }; }} */ evt ) =>
 				{
-					this.handleNodePeerMessage( this.node, callbackMessage, evt );
+					this.handleNodePeerMessage( this.node, createP2pOptions.callbackMessage, evt );
 				});
 
 				//	...

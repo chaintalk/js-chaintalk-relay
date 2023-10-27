@@ -5,6 +5,7 @@ import { PeerUtil } from "../utils/PeerUtil.js";
 import { PrepareUtil } from "../utils/PrepareUtil.js";
 import { enable, logger } from "@libp2p/logger";
 import _ from 'lodash';
+import { CreateP2pOptionsBuilder } from "../models/CreateP2pOptionsBuilder.js";
 
 const log = logger( 'chaintalk:RelayService' )
 enable( 'chaintalk:RelayService' );
@@ -97,18 +98,18 @@ export class RelayService
 				}
 
 				//	Create Relay
-				this.p2pNode = await this.p2pService.createP2pNode( {
-					peerId : peerIdObject,
-					swarmKey : swarmKey,
-					listenAddresses : listenAddresses,
-					announceAddresses : options.announceAddresses,
-					bootstrapperAddresses : options.bootstrapperAddresses,
-					pubsubDiscoveryEnabled : true,
-					callbackMessage : ( param ) =>
+				const createP2pOptions = CreateP2pOptionsBuilder.builder()
+					.setPeerId( peerIdObject )
+					.setSwarmKey( swarmKey )
+					.setListenAddresses( listenAddresses )
+					.setAnnounceAddresses( options.announceAddresses )
+					.setBootstrapperAddresses( options.bootstrapperAddresses )
+					.setCallbackMessage( ( param ) =>
 					{
 						this.onReceivedMessage( param );
-					},
-				} );
+					} )
+					.build();
+				this.p2pNode = await this.p2pService.createP2pNode( createP2pOptions );
 				await this.p2pNode.start();
 
 				//	...
