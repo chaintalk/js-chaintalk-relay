@@ -1,4 +1,3 @@
-import chalk from "chalk";
 import { PubSubBase } from "./PubSubBase.js";
 
 
@@ -38,4 +37,4 @@ class Subscriber extends PubSubBase
 }
 
 //	...
-new Subscriber().start().then( result =>{}).catch( err => console.error );
+new Subscriber().start().then( _result =>{}).catch( _err => console.error );

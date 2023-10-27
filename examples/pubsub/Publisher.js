@@ -57,4 +57,4 @@ class Publisher extends PubSubBase
 }
 
 //	...
-new Publisher().start().then( result =>{}).catch( err => console.error );
+new Publisher().start().then( _result =>{}).catch( _err => console.error );

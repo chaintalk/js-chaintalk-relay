@@ -46,7 +46,7 @@ export class PubSubBase
 					.setBootstrapperAddresses( bootstrappers )
 					.build();
 				this.relayNode = await this.relayService.createRelay( createRelayOptions );
-				const subscribed = await this.relayService.subscribe( this.subTopic, ( param ) =>
+				await this.relayService.subscribe( this.subTopic, ( param ) =>
 				{
 					if ( _.isFunction( callback ) )
 					{
