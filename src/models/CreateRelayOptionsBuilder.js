@@ -1,25 +1,6 @@
 import _ from 'lodash';
 import { ParamUtil } from "../utils/ParamUtil.js";
 
-/**
- * 	@typedef {import('@libp2p/interface/peer-id').PeerId} PeerId
- */
-
-/**
- *	@typedef  CallbackMessageParams {object}
- *	@property type			{string}
- *	@property topic			{string}
- *	@property msgId			{string|null}
- *	@property from			{PeerId}
- *	@property sequenceNumber	{bigint}
- *	@property data			{any}
- *	@property body			{any}
- */
-/**
- *	@callback CallbackMessage
- *	@param  params		{CallbackMessageParams}
- *	@return {boolean}	- return value
- */
 
 /**
  *	@typedef  CreateRelayOptions {object}
@@ -28,7 +9,6 @@ import { ParamUtil } from "../utils/ParamUtil.js";
  *	@property port {number}
  *	@property announceAddresses {string[]}
  *	@property bootstrapperAddresses {string[]}
- *	@property callbackMessage {CallbackMessage}
  */
 
 
@@ -62,12 +42,6 @@ export class CreateRelayOptionsBuilder
 	 *	@type {string[]}
 	 */
 	bootstrapperAddresses = [];
-
-	/**
-	 *
-	 * 	@type {CallbackMessage}
-	 */
-	callbackMessage = ( { allPeers = [], msgId = null, data = null } ) => false;
 
 
 	constructor()
@@ -129,15 +103,6 @@ export class CreateRelayOptionsBuilder
 	}
 
 	/**
-	 *	@returns {this}
-	 */
-	setCallbackMessage( /** @type {CallbackMessage} */ value )
-	{
-		this.callbackMessage = value;
-		return this;
-	}
-
-	/**
 	 *	@returns {CreateRelayOptions}
 	 */
 	build()
@@ -165,21 +130,13 @@ export class CreateRelayOptionsBuilder
 		{
 			throw new Error( `invalid bootstrapperAddresses` );
 		}
-		if ( this.callbackMessage )
-		{
-			if ( ! _.isFunction( this.callbackMessage ) )
-			{
-				throw new Error( `invalid callbackMessage` );
-			}
-		}
 
 		return {
 			peerIdFilename : this.peerIdFilename,
 			swarmKeyFilename : this.swarmKeyFilename,
 			port : this.port,
 			announceAddresses : this.announceAddresses,
-			bootstrapperAddresses : this.bootstrapperAddresses,
-			callbackMessage : this.callbackMessage,
+			bootstrapperAddresses : this.bootstrapperAddresses
 		}
 	}
 }
