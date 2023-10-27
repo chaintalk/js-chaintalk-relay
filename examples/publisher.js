@@ -4,6 +4,7 @@ const argv = minimist( process.argv.slice( 2 ) );
 import { bootstrappers } from "./bootstrappers.js";
 import chalk from "chalk";
 import { CreateRelayOptionsBuilder } from "../src/models/CreateRelayOptionsBuilder.js";
+import { TimerUtil } from "../src/utils/TimerUtil.js";
 
 /**
  *	@type {string}
@@ -29,37 +30,68 @@ async function publisher()
 	const relayNode = await relayService.createRelay( createRelayOptions );
 	await relayService.subscribe( syncTopic, ( _param ) => {} );
 
-	setInterval(async () =>
+	const pfnNetworkHealthChecker = () =>
 	{
 		const allPeers = relayService.getPeers();
-		if ( Array.isArray( allPeers ) && allPeers.length > 0 )
+		if ( ! Array.isArray( allPeers ) || 0 === allPeers.length )
 		{
-			console.log( `${ chalk.bgGreen( ')))))))))) )))))))))) allPeers' ) } : `, allPeers );
-		}
-		else
-		{
-			console.log( `${ chalk.bgRed( ')))))))))) )))))))))) allPeers' ) } : `, allPeers );
+			return `no connected peer`;
 		}
 
 		const allSubscribers = relayService.getSubscribers( syncTopic );
-		if ( Array.isArray( allSubscribers ) && allSubscribers.length > 0 )
+		if ( ! Array.isArray( allSubscribers ) || 0 === allSubscribers.length )
 		{
-			console.log( `${ chalk.bgGreen( ')))))))))) )))))))))) allSubscribers' ) } : `, allSubscribers );
-		}
-		else
-		{
-			console.log( `${ chalk.bgRed( ')))))))))) )))))))))) allSubscribers' ) } : `, allSubscribers );
+			return `no connected subscribers`;
 		}
 
 		const allTopics = relayService.getTopics();
-		if ( Array.isArray( allTopics ) && allTopics.length > 0 )
+		if ( ! Array.isArray( allTopics ) || 0 === allTopics.length )
 		{
-			console.log( `${ chalk.bgGreen( ')))))))))) )))))))))) allTopics' ) } : `, allTopics );
+			return `no subscribed topics`;
 		}
-		else
+
+		return null;
+	};
+	const pfnPrintNetworkInfo = () =>
+	{
+		const allPeers = relayService.getPeers();
+		console.log( `)))))))))) allPeers :`, allPeers );
+
+		const allSubscribers = relayService.getSubscribers( syncTopic );
+		console.log( `)))))))))) allSubscribers :`, allSubscribers );
+
+		const allTopics = relayService.getTopics();
+		console.log( `)))))))))) allTopics :`, allTopics );
+	};
+
+	await TimerUtil.waitForDelay( 1000 );
+	console.log( `${ chalk.cyan( 'Waiting for network connection to be ready ...' ) } ` );
+
+	await TimerUtil.waitUntilCondition( () =>
+	{
+		const networkError = pfnNetworkHealthChecker();
+		if ( null !== networkError )
 		{
-			console.log( `${ chalk.bgRed( ')))))))))) )))))))))) allTopics' ) } : `, allTopics );
+			console.log( `${ chalk.bgYellow( 'WAITING : ' ) }`, networkError );
+			return false;
 		}
+
+		return true;
+	}, 1000 );
+	console.log( `${ chalk.bgGreen( 'Network connection is ready :)' ) } ` );
+	pfnPrintNetworkInfo();
+
+	setInterval(async () =>
+	{
+		const networkError = pfnNetworkHealthChecker();
+		if ( null !== networkError )
+		{
+			console.log( `${ chalk.bgRed( 'Network error' ) } : `, networkError );
+			return false;
+		}
+
+		//	...
+		pfnPrintNetworkInfo();
 
 		const datetime = new Date().toISOString();
 		const pubObject = {
