@@ -18,14 +18,15 @@ import { TypeUtil, LogUtil } from 'chaintalk-utils';
 import { PeerUtil } from "../utils/PeerUtil.js";
 
 import { logger, enable } from "@libp2p/logger";
+import { toString as uint8ArrayToString } from "uint8arrays/to-string";
 enable( 'libp2p:floodsub' );
 
-const log = logger( 'chaintalk:RelayNodeService' )
-enable( 'chaintalk:RelayNodeService' );
+const log = logger( 'chaintalk:P2pService' )
+enable( 'chaintalk:P2pService' );
 
 
 
-export class RelayNodeService
+export class P2pService
 {
 	/**
 	 * @typedef {import('@libp2p/interface').Libp2p} Libp2p
@@ -62,16 +63,8 @@ export class RelayNodeService
 	{
 		if ( this.node )
 		{
-			throw new Error( `RelayNodeService already created` );
+			throw new Error( `P2pService already created` );
 		}
-	}
-
-	/**
-	 *	@returns {string}
-	 */
-	getSyncTopic()
-	{
-		return 'peer-message-sync';
 	}
 
 	/**
@@ -89,7 +82,7 @@ export class RelayNodeService
 	 * 	@property msgId {Uint8Array[]}
 	 * 	@property data {any}
 	 *
-	 * 	@callback CallbackMessageReceiver
+	 * 	@callback CallbackMessage
 	 *	@param callbackOptions {CallbackMessageReceiverOptions}
 	 *	@returns {Boolean}
 	 *
@@ -100,7 +93,7 @@ export class RelayNodeService
 	 * 	@property announceAddresses { string[] }
 	 * 	@property bootstrapperAddresses { string[] }
 	 * 	@property pubsubDiscoveryEnabled { Boolean }
-	 * 	@property callbackMessageReceiver { CallbackMessageReceiver }
+	 * 	@property callbackMessage { CallbackMessage }
 	 */
 
 	/**
@@ -108,15 +101,14 @@ export class RelayNodeService
 	 *	@param {CreateOptions} options
 	 *	@returns {Promise<Libp2p>}
 	 */
-	async create(
+	async createP2pNode(
 		{
 			peerId = undefined,
 			swarmKey = undefined,
 			listenAddresses = [],
 			announceAddresses = [],
 			bootstrapperAddresses = [],
-			pubsubDiscoveryEnabled = true,
-			callbackMessageReceiver = ({ allPeers = [], msgId = null, data = null }) => false
+			callbackMessage = ( any ) => false
 		}
 	)
 	{
@@ -246,10 +238,10 @@ export class RelayNodeService
 				//
 				//	pub/sub
 				//
-				this.node.services.pubsub.subscribe( this.getSyncTopic() );
+				//this.node.services.pubsub.subscribe( this.getSyncTopic() );
 				this.node.services.pubsub.addEventListener( 'message', ( /** @type {{ detail: { type: any; topic: any; from: any; }; }} */ evt ) =>
 				{
-					this.handleNodePeerMessage( this.node, callbackMessageReceiver, evt );
+					this.handleNodePeerMessage( this.node, callbackMessage, evt );
 				});
 
 				//	...
@@ -351,14 +343,14 @@ export class RelayNodeService
 
 	/**
 	 *	@param node
-	 *	@param callbackMessageReceiver
+	 *	@param callbackMessage	{CallbackMessage}
 	 *	@param evt
 	 *	@return {boolean}
 	 */
 	handleNodePeerMessage
 	(
 		node,
-		callbackMessageReceiver,
+		callbackMessage,
 		/** @type {{ detail: { type: any; topic: any; from: any; }; }} */ evt
 	)
 	{
@@ -423,8 +415,8 @@ export class RelayNodeService
 			const recType = evt.detail.type;
 			const recTopic = evt.detail.topic;
 			const recFrom = evt.detail.from;
-			const recSequence = evt.detail.sequenceNumber;
-			//const recData = uint8ArrayToString( evt.detail.data );
+			const recSequenceNumber = evt.detail.sequenceNumber;
+			let recBody = null;
 
 			if ( 'signed' !== recType )
 			{
@@ -437,19 +429,21 @@ export class RelayNodeService
 				return false;
 			}
 
-			console.log( `|||||||||||||||||||| Received a message ||||||||||||||||||||` );
-			if ( this.getSyncTopic() !== recTopic )
+			try
 			{
-				LogUtil.warn( `-[.] received irrelevant topics` );
-				return false;
+				recBody = JSON.parse( uint8ArrayToString( evt.detail.data ) );
 			}
+			catch ( err ){}
+
 
 			//	...
 			//const allSubscribers = node.services.pubsub.getSubscribers( this.getSyncTopic() );
 			// console.log( `allSubscribers : `, allSubscribers );
 			//const allTopics = node.services.pubsub.getTopics();
 			//console.log( `allTopics : `, allTopics );
-			const allPeers = this.node.services.pubsub.getPeers();
+
+			//	...
+			//const allPeers = this.node.services.pubsub.getPeers();
 			// console.log( `allPeers : `, allPeers );
 
 			//
@@ -474,13 +468,17 @@ export class RelayNodeService
 			// 	console.log( `msgId : ${ msgIdUInt8Arr }` );
 			// }
 
-			console.log( `will call callbackMessageReceiver` );
-			if ( TypeUtil.isFunction( callbackMessageReceiver ) )
+			//console.log( `will call callbackMessage` );
+			if ( TypeUtil.isFunction( callbackMessage ) )
 			{
-				callbackMessageReceiver({
-					allPeers : allPeers,
+				callbackMessage({
+					type : recType,
+					topic : recTopic,
 					msgId : undefined,	//	msgIdUInt8Arr
+					from : recFrom,
+					sequenceNumber : recSequenceNumber,
 					data : evt.detail,
+					body : recBody,
 				});
 			}
 

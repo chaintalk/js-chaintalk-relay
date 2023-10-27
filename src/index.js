@@ -1,2 +1,2 @@
-import { SwarmRelay } from "./services/SwarmRelay.js";
-export { SwarmRelay }
+import { RelayService } from "./services/RelayService.js";
+export { RelayService }

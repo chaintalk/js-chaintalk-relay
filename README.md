@@ -1,6 +1,6 @@
 # js-chaintalk-relay
 
-ChainTalk SwarmRelay Server
+ChainTalk RelayService Server
 
 
 # Run Test
