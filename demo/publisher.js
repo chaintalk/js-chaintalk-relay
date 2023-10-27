@@ -30,7 +30,7 @@ async function publisher()
 		.setBootstrapperAddresses( bootstrappers )
 		.build();
 	relayNode = await relayService.createRelay( createRelayOptions );
-	await relayService.subscribe( syncTopic, ( param ) =>
+	await relayService.subscribe( syncTopic, ( _param ) =>
 	{
 	//	console.log( `relayService.subscribe received message :`, param );
 	} );

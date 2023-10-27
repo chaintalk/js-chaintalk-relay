@@ -108,7 +108,7 @@ export class P2pService
 			listenAddresses = [],
 			announceAddresses = [],
 			bootstrapperAddresses = [],
-			callbackMessage = ( any ) => false
+			callbackMessage = () => false
 		}
 	)
 	{
