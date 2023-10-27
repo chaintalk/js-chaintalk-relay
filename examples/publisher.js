@@ -10,13 +10,6 @@ import { CreateRelayOptionsBuilder } from "../src/models/CreateRelayOptionsBuild
  */
 const syncTopic = 'sync-topic';
 
-/**
- *	@type {RelayService}
- */
-const relayService = new RelayService();
-let relayNode = null;
-
-
 async function publisher()
 {
 	const port = argv.port || process.env.PORT || undefined;
@@ -29,7 +22,11 @@ async function publisher()
 		.setAnnounceAddresses( [] )
 		.setBootstrapperAddresses( bootstrappers )
 		.build();
-	relayNode = await relayService.createRelay( createRelayOptions );
+	/**
+	 *	@type {RelayService}
+	 */
+	const relayService = new RelayService();
+	const relayNode = await relayService.createRelay( createRelayOptions );
 	await relayService.subscribe( syncTopic, ( _param ) => {} );
 
 	setInterval(async () =>

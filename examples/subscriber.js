@@ -10,12 +10,6 @@ const argv = minimist( process.argv.slice( 2 ) );
  */
 const syncTopic = 'sync-topic';
 
-/**
- *	@type {RelayService}
- */
-const relayService = new RelayService();
-let relayNode = null;
-
 
 async function subscriber()
 {
@@ -29,7 +23,11 @@ async function subscriber()
 		.setAnnounceAddresses( [] )
 		.setBootstrapperAddresses( bootstrappers )
 		.build();
-	relayNode = await relayService.createRelay( createRelayOptions );
+	/**
+	 *	@type {RelayService}
+	 */
+	const relayService = new RelayService();
+	const relayNode = await relayService.createRelay( createRelayOptions );
 	await relayService.subscribe( syncTopic, ( param ) =>
 	{
 		console.log( `received a new message >>>>>>>>>>>>>>>>>>>>>>>>>>>>>> :` );
